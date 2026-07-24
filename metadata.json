@@ -1,0 +1,6 @@
+{
+  "name": "Taleem Institute Management System",
+  "description": "Comprehensive institute management system for Taleem Institute of Science and Technology, featuring student enrollment, fee management, thermal receipt printing, QR attendance, and multi-role access.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

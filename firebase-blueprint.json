@@ -1,0 +1,110 @@
+{
+  "entities": {
+    "students": {
+      "title": "Students",
+      "description": "Student records for Taleem Institute",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique student registration ID" },
+        "rollNo": { "type": "string" },
+        "studentName": { "type": "string" },
+        "fatherName": { "type": "string" },
+        "gender": { "type": "string" },
+        "dob": { "type": "string" },
+        "cnicBForm": { "type": "string" },
+        "contactNo": { "type": "string" },
+        "emergencyContact": { "type": "string" },
+        "address": { "type": "string" },
+        "enrolledCourses": { "type": "array", "items": { "type": "string" } },
+        "admissionDate": { "type": "string" },
+        "status": { "type": "string" },
+        "photoUrl": { "type": "string" },
+        "bloodGroup": { "type": "string" },
+        "notes": { "type": "string" },
+        "customDiscountPercent": { "type": "number" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "rollNo", "studentName", "contactNo", "enrolledCourses", "status"]
+    },
+    "fee_transactions": {
+      "title": "Fee Transactions",
+      "description": "Fee receipt transactions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "receiptNo": { "type": "string" },
+        "studentId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "courseIds": { "type": "array", "items": { "type": "string" } },
+        "courseNames": { "type": "array", "items": { "type": "string" } },
+        "paidAmount": { "type": "number" },
+        "discountAmount": { "type": "number" },
+        "paymentDate": { "type": "string" },
+        "paymentMonth": { "type": "string" },
+        "paymentSource": { "type": "string" },
+        "remarks": { "type": "string" },
+        "receivedBy": { "type": "string" }
+      },
+      "required": ["id", "receiptNo", "studentId", "studentName", "paidAmount", "paymentDate"]
+    },
+    "attendance_records": {
+      "title": "Attendance Records",
+      "description": "Daily student attendance tracking",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "studentId": { "type": "string" },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "status": { "type": "string" },
+        "remarks": { "type": "string font" }
+      },
+      "required": ["id", "studentId", "date", "status"]
+    },
+    "courses": {
+      "title": "Courses",
+      "description": "Offered courses and fees",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "code": { "type": "string" },
+        "durationMonths": { "type": "number" },
+        "feeAmount": { "type": "number" },
+        "teacherName": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "name", "code", "feeAmount"]
+    },
+    "settings": {
+      "title": "Institute Settings",
+      "description": "Institute settings",
+      "type": "object",
+      "properties": {
+        "instituteName": { "type": "string" },
+        "subTitle": { "type": "string" },
+        "logoUrl": { "type": "string" },
+        "address": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "currency": { "type": "string" },
+        "thermalReceiptHeader": { "type": "string" },
+        "thermalReceiptFooter": { "type": "string font" }
+      },
+      "required": ["instituteName", "phone"]
+    },
+    "user_accounts": {
+      "title": "User Accounts",
+      "description": "Staff login accounts",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "username": { "type": "string" },
+        "password": { "type": "string font" },
+        "role": { "type": "string" },
+        "name": { "type": "string" }
+      },
+      "required": ["id", "username", "role"]
+    }
+  }
+}

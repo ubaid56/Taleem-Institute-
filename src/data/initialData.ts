@@ -1,0 +1,179 @@
+import { Course, Student, FeeTransaction, AttendanceRecord, StaffUser, InstituteSettings, Expense, StaffSalaryRecord } from '../types';
+
+export const DEFAULT_SETTINGS: InstituteSettings = {
+  instituteName: 'Taleem Institute',
+  subTitle: 'OF SCIENCE & TECHNOLOGY',
+  address: 'Dubai adda road Bakhshali',
+  phone: '03481064487',
+  whatsappPhone: '03481064487',
+  email: 'info@tist.edu.pk',
+  ownerName: 'Ubaid Ahmad',
+  logoUrl: '',
+  currencySymbol: 'Rs.',
+  receiptFooterNote: 'Thank you for your prompt fee submission!',
+  registrationNo: 'REG-2026/TIST/99',
+};
+
+export const INITIAL_COURSES: Course[] = [
+  {
+    id: 'course-dit-2026',
+    code: 'DIT-2026',
+    name: 'DIT Batch 2026-27 (Diploma in Info Tech)',
+    baseCourseType: 'DIT',
+    durationMonths: 12,
+    monthlyFee: 2000,
+    admissionFee: 3000,
+    examFeeSem1: 1500,
+    examFeeSem2: 1500,
+    description: '1-Year Board recognized Diploma in Information Technology covering Hardware, Networking, Web & DB.',
+    active: true,
+    createdAt: '2026-01-01',
+  },
+  {
+    id: 'course-cit-2026',
+    code: 'CIT-2026',
+    name: 'CIT Batch 2026 (Certificate in Info Tech)',
+    baseCourseType: 'CIT',
+    durationMonths: 6,
+    monthlyFee: 2500,
+    admissionFee: 2000,
+    examFeeSem1: 0,
+    examFeeSem2: 0,
+    description: '6-Month Certificate Course in Computer Concepts, Office Automation and Internet Applications.',
+    active: true,
+    createdAt: '2026-01-01',
+  },
+  {
+    id: 'course-eng-2026',
+    code: 'ENG-2026',
+    name: 'English Language Spoken & Grammar',
+    baseCourseType: 'English Language',
+    durationMonths: 3,
+    monthlyFee: 1800,
+    admissionFee: 1000,
+    examFeeSem1: 0,
+    examFeeSem2: 0,
+    description: '3-Month Spoken English, Pronunciation, Grammar, and Public Speaking Intensive Module.',
+    active: true,
+    createdAt: '2026-01-05',
+  },
+  {
+    id: 'course-web-2026',
+    code: 'WEB-2026',
+    name: 'Full Stack Web Development',
+    baseCourseType: 'Web Development',
+    durationMonths: 6,
+    monthlyFee: 3500,
+    admissionFee: 2500,
+    examFeeSem1: 0,
+    examFeeSem2: 0,
+    description: 'HTML5, CSS3, JavaScript, React.js, Node.js & Database Engineering.',
+    active: true,
+    createdAt: '2026-02-01',
+  },
+  {
+    id: 'course-gfx-2026',
+    code: 'GFX-2026',
+    name: 'Graphics Designing Masterclass',
+    baseCourseType: 'Graphics Designing',
+    durationMonths: 4,
+    monthlyFee: 3000,
+    admissionFee: 2000,
+    examFeeSem1: 0,
+    examFeeSem2: 0,
+    description: 'Adobe Photoshop, Illustrator, InDesign, UI/UX Essentials, Branding & Print Media.',
+    active: true,
+    createdAt: '2026-02-10',
+  },
+  {
+    id: 'course-yta-2026',
+    code: 'YTA-2026',
+    name: 'YouTube Automation & Monetization',
+    baseCourseType: 'YouTube Automation',
+    durationMonths: 3,
+    monthlyFee: 4000,
+    admissionFee: 2000,
+    examFeeSem1: 0,
+    examFeeSem2: 0,
+    description: 'Faceless channels, Scriptwriting, AI Voiceovers, Video Editing, SEO & Monetization strategy.',
+    active: true,
+    createdAt: '2026-03-01',
+  },
+];
+
+export const INITIAL_STUDENTS: Student[] = [];
+
+export const INITIAL_TRANSACTIONS: FeeTransaction[] = [];
+
+export const INITIAL_ATTENDANCE: AttendanceRecord[] = [];
+
+export const INITIAL_USERS: StaffUser[] = [
+  {
+    id: 'usr-admin',
+    name: 'Ubaid Ahmad',
+    username: 'admin',
+    password: 'admin123',
+    role: 'super_admin',
+    email: 'ubaidahmad184@gmail.com',
+    phone: '03481064487',
+    baseSalary: 80000,
+    permissions: {
+      canAddStudent: true,
+      canSubmitFee: true,
+      canManageCourses: true,
+      canViewFinancials: true,
+      canTakeAttendance: true,
+      canManageStatus: true,
+      canManageUsers: true,
+      canManageExpenses: true,
+      canManagePayroll: true,
+    }
+  },
+  {
+    id: 'usr-acct',
+    name: 'Sajid Khan',
+    username: 'sajid_accountant',
+    password: 'accountant123',
+    role: 'accountant',
+    email: 'sajid.tist@gmail.com',
+    phone: '0301-1112223',
+    baseSalary: 45000,
+    permissions: {
+      canAddStudent: true,
+      canSubmitFee: true,
+      canManageCourses: false,
+      canViewFinancials: true,
+      canTakeAttendance: false,
+      canManageStatus: false,
+      canManageUsers: false,
+      canManageExpenses: true,
+      canManagePayroll: false,
+    }
+  },
+  {
+    id: 'usr-teacher',
+    name: 'Prof. Asad Khan',
+    username: 'asad_teacher',
+    password: 'teacher123',
+    role: 'teacher',
+    email: 'asad.teacher@tist.edu.pk',
+    phone: '0333-4445556',
+    baseSalary: 55000,
+    assignedCourses: ['course-dit-2026', 'course-cit-2026', 'course-web-2026'],
+    permissions: {
+      canAddStudent: false,
+      canSubmitFee: false,
+      canManageCourses: false,
+      canViewFinancials: false,
+      canTakeAttendance: true,
+      canManageStatus: false,
+      canManageUsers: false,
+      canManageExpenses: false,
+      canManagePayroll: false,
+    }
+  }
+];
+
+export const INITIAL_EXPENSES: Expense[] = [];
+
+export const INITIAL_SALARY_RECORDS: StaffSalaryRecord[] = [];
