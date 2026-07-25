@@ -212,7 +212,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       case 'expenses':
         return !!userPermissions.canManageExpenses || !!userPermissions.canViewFinancials || !!userPermissions.canSubmitFee;
       case 'staff_payroll':
-        return !!userPermissions.canManagePayroll || !!userPermissions.canViewFinancials;
+        return !!userPermissions.canManagePayroll;
       case 'financial_statement':
         return !!userPermissions.canViewFinancials;
       case 'pass_out':

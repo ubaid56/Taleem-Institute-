@@ -537,6 +537,16 @@ export const UserAccessManager: React.FC<UserAccessManagerProps> = ({
                   <span>Can Manage Staff & Access</span>
                 </label>
 
+                <label className="flex items-center space-x-2 bg-emerald-50 p-2.5 border border-emerald-800 text-emerald-950 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={canManagePayroll}
+                    onChange={(e) => setCanManagePayroll(e.target.checked)}
+                    className="accent-emerald-900"
+                  />
+                  <span>Can Manage Staff Salary & Payroll</span>
+                </label>
+
               </div>
             </div>
 
