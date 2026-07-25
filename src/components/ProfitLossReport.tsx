@@ -85,22 +85,22 @@ export const ProfitLossReport: React.FC<ProfitLossReportProps> = ({
     <div className="space-y-6 max-w-7xl mx-auto text-[#1A1A1A]">
       
       {/* Header Bar */}
-      <div className="bg-white border-2 border-[#1A1A1A] p-5 sm:p-6 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center space-x-3">
-          <div className="w-12 h-12 bg-[#1A1A1A] text-white flex items-center justify-center shrink-0 border border-[#1A1A1A]">
-            <PieChart className="w-6 h-6 text-emerald-400" />
+      <div className="bg-white border-2 border-[#1A1A1A] p-4 sm:p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-center space-x-3 min-w-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#1A1A1A] text-white flex items-center justify-center shrink-0 border border-[#1A1A1A]">
+            <PieChart className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-400" />
           </div>
-          <div>
+          <div className="min-w-0">
             <h1 className="text-xl sm:text-2xl font-serif italic font-bold text-[#1A1A1A] uppercase tracking-wide">
               Monthly Profit & Loss Statement
             </h1>
-            <p className="text-xs text-[#1A1A1A]/70 font-mono">
+            <p className="text-[10px] sm:text-xs text-[#1A1A1A]/70 font-mono">
               Comprehensive financial breakdown: Total Fee Collections vs Salaries, Advances & Operating Expenses
             </p>
           </div>
         </div>
 
-        <div className="flex items-center space-x-2 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto shrink-0">
           <Calendar className="w-4 h-4 text-[#1A1A1A]/70 shrink-0" />
           <span className="text-xs font-bold uppercase tracking-wider text-[#1A1A1A]">Report Month:</span>
           <input

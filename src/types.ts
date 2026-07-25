@@ -14,6 +14,7 @@ export interface Course {
   admissionFee: number;
   examFeeSem1: number; // Only applicable for DIT
   examFeeSem2: number; // Only applicable for DIT
+  totalCourseFee?: number; // Total package fee for 'Course Wise' base category
   description?: string;
   active: boolean;
   createdAt: string;
@@ -57,6 +58,9 @@ export interface Student {
   status: StudentStatus;
   statusChangeDate?: string;
   statusChangeRemarks?: string;
+  assignedMonthlyFee?: number;
+  assignedAdmissionFee?: number;
+  assignedExamFee?: number;
   qrCodeData: string;
   isDefaulterExempted?: boolean;
   createdAt: string;

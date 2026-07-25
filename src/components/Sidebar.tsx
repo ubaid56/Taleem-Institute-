@@ -18,7 +18,8 @@ import {
   AlertTriangle,
   TrendingDown,
   DollarSign,
-  PieChart
+  PieChart,
+  Database
 } from 'lucide-react';
 
 export type TabType = 
@@ -37,7 +38,8 @@ export type TabType =
   | 'pass_out' 
   | 'suspended' 
   | 'access_control'
-  | 'general_settings';
+  | 'general_settings'
+  | 'backup';
 
 interface SidebarProps {
   activeTab: TabType;
@@ -189,6 +191,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
       roles: ['super_admin'],
       accentColor: 'text-purple-600',
     },
+    {
+      id: 'backup',
+      label: 'Database Backup & Restore',
+      icon: Database,
+      roles: ['super_admin'],
+      accentColor: 'text-emerald-500',
+    },
   ];
 
   const visibleItems = menuItems.filter(item => {
@@ -220,6 +229,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         return !!userPermissions.canManageStatus;
       case 'access_control':
         return !!userPermissions.canManageUsers;
+      case 'backup':
+        return !!userPermissions.canManageUsers || currentRole === 'super_admin';
       default:
         return false;
     }
@@ -233,7 +244,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const sidebarContent = (
-    <div className="w-64 bg-slate-900 border-r border-slate-800 shrink-0 min-h-full p-4 flex flex-col justify-between text-slate-100 shadow-xl overflow-y-auto">
+    <div className="w-64 bg-slate-900 border-r border-slate-800 shrink-0 min-h-full h-full p-4 flex flex-col justify-between text-slate-100 shadow-xl overflow-y-auto overscroll-contain scroll-smooth touch-pan-y [webkit-overflow-scrolling:touch]">
       <div className="space-y-4">
         
         <div className="px-2 pt-1 flex items-center justify-between">
@@ -307,7 +318,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <>
       {/* Desktop Sidebar (visible md+) */}
-      <aside className="hidden md:flex min-h-[calc(100vh-4.5rem)] print:hidden">
+      <aside className="hidden md:flex min-h-[calc(100vh-4.5rem)] max-h-[calc(100vh-4.5rem)] overflow-y-auto overscroll-contain scroll-smooth print:hidden">
         {sidebarContent}
       </aside>
 
@@ -320,7 +331,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity"
           />
           {/* Drawer Content */}
-          <div className="relative z-10 flex-1 max-w-xs w-full">
+          <div className="relative z-10 flex-1 max-w-xs w-full max-h-screen h-full overflow-y-auto overscroll-contain scroll-smooth touch-pan-y [webkit-overflow-scrolling:touch]">
             {sidebarContent}
           </div>
         </div>

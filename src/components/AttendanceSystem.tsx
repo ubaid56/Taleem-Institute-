@@ -253,19 +253,19 @@ export const AttendanceSystem: React.FC<AttendanceSystemProps> = ({
     <div className="space-y-6 max-w-6xl mx-auto text-[#1A1A1A]">
       
       {/* Header & View Switcher Tabs */}
-      <div className="bg-white border-2 border-[#1A1A1A] p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-center space-x-3">
-          <div className="w-12 h-12 bg-[#1A1A1A] text-white flex items-center justify-center shrink-0 font-serif italic text-2xl font-bold">
+      <div className="bg-white border-2 border-[#1A1A1A] p-4 sm:p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-center space-x-3 min-w-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#1A1A1A] text-white flex items-center justify-center shrink-0 font-serif italic text-xl sm:text-2xl font-bold">
             Qr
           </div>
-          <div>
-            <h2 className="font-serif italic font-bold text-2xl text-[#1A1A1A]">Student Attendance & Reports</h2>
+          <div className="min-w-0">
+            <h2 className="font-serif italic font-bold text-xl sm:text-2xl text-[#1A1A1A]">Student Attendance & Reports</h2>
             <p className="text-[10px] uppercase tracking-widest text-[#1A1A1A]/70 font-bold">Scan ID card QR code or view weekly, monthly & date-to-date reports</p>
           </div>
         </div>
 
-        <div className="flex items-center space-x-2">
-          <div className="flex p-1 bg-[#F4F2EE] border-2 border-[#1A1A1A]">
+        <div className="flex items-center space-x-2 shrink-0 w-full md:w-auto">
+          <div className="flex p-1 bg-[#F4F2EE] border-2 border-[#1A1A1A] w-full md:w-auto">
             <button
               onClick={() => setActiveTab('mark')}
               className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition flex items-center space-x-1.5 ${

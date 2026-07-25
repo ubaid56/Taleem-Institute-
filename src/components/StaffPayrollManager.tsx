@@ -154,16 +154,16 @@ export const StaffPayrollManager: React.FC<StaffPayrollManagerProps> = ({
     <div className="space-y-6 max-w-7xl mx-auto text-[#1A1A1A]">
       
       {/* Header Bar */}
-      <div className="bg-white border-2 border-[#1A1A1A] p-5 sm:p-6 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center space-x-3">
-          <div className="w-12 h-12 bg-emerald-800 text-white flex items-center justify-center shrink-0 border border-emerald-950">
-            <DollarSign className="w-6 h-6" />
+      <div className="bg-white border-2 border-[#1A1A1A] p-4 sm:p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-center space-x-3 min-w-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-800 text-white flex items-center justify-center shrink-0 border border-emerald-950">
+            <DollarSign className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
-          <div>
+          <div className="min-w-0">
             <h1 className="text-xl sm:text-2xl font-serif italic font-bold text-[#1A1A1A] uppercase tracking-wide">
               Staff Salaries & Advance Management
             </h1>
-            <p className="text-xs text-[#1A1A1A]/70 font-mono">
+            <p className="text-[10px] sm:text-xs text-[#1A1A1A]/70 font-mono">
               Track base salaries, advance salary loans, regular payouts, and individual monthly pay reports
             </p>
           </div>

@@ -213,13 +213,13 @@ export const UserAccessManager: React.FC<UserAccessManagerProps> = ({
     <div className="space-y-6 max-w-6xl mx-auto text-[#1A1A1A]">
       
       {/* Header */}
-      <div className="bg-white border-2 border-[#1A1A1A] p-6 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center space-x-3">
-          <div className="w-12 h-12 bg-[#1A1A1A] text-white flex items-center justify-center shrink-0 font-serif italic text-2xl font-bold">
+      <div className="bg-white border-2 border-[#1A1A1A] p-4 sm:p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-center space-x-3 min-w-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#1A1A1A] text-white flex items-center justify-center shrink-0 font-serif italic text-xl sm:text-2xl font-bold">
             Us
           </div>
-          <div>
-            <h2 className="font-serif italic font-bold text-2xl text-[#1A1A1A]">Staff Access & Role Permissions</h2>
+          <div className="min-w-0">
+            <h2 className="font-serif italic font-bold text-xl sm:text-2xl text-[#1A1A1A]">Staff Access & Role Permissions</h2>
             <p className="text-[10px] uppercase tracking-widest text-[#1A1A1A]/70 font-bold">Super Admin role control for Accountants & Course Teachers</p>
           </div>
         </div>
@@ -229,9 +229,9 @@ export const UserAccessManager: React.FC<UserAccessManagerProps> = ({
             resetForm();
             setShowAddModal(true);
           }}
-          className="w-full sm:w-auto px-5 py-2.5 bg-[#1A1A1A] hover:bg-[#333] text-white font-bold text-xs uppercase tracking-widest border border-[#1A1A1A] flex items-center justify-center space-x-2 transition"
+          className="w-full md:w-auto px-5 py-2.5 bg-[#1A1A1A] hover:bg-[#333] text-white font-bold text-xs uppercase tracking-widest border border-[#1A1A1A] flex items-center justify-center space-x-2 transition shrink-0"
         >
-          <UserPlus className="w-4 h-4" />
+          <UserPlus className="w-4 h-4 shrink-0" />
           <span>Add Staff Account</span>
         </button>
       </div>
@@ -690,6 +690,8 @@ export const UserAccessManager: React.FC<UserAccessManagerProps> = ({
                     {usr.permissions.canManageCourses && <span className="text-[9px] px-2 py-0.5 border border-[#1A1A1A] bg-[#FDFCFB] text-[#1A1A1A] font-bold uppercase">Courses Admin</span>}
                     {(usr.role === 'super_admin' || usr.permissions.canManageStatus) && <span className="text-[9px] px-2 py-0.5 border border-blue-800 bg-blue-50 text-blue-900 font-bold uppercase">Pass Out / Suspended</span>}
                     {(usr.role === 'super_admin' || usr.permissions.canManageUsers) && <span className="text-[9px] px-2 py-0.5 border border-purple-800 bg-purple-50 text-purple-900 font-bold uppercase">Staff & Access</span>}
+                    {usr.permissions.canManageExpenses && <span className="text-[9px] px-2 py-0.5 border border-indigo-800 bg-indigo-50 text-indigo-900 font-bold uppercase">Expense Manager</span>}
+                    {usr.permissions.canManagePayroll && <span className="text-[9px] px-2 py-0.5 border border-emerald-800 bg-emerald-50 text-emerald-900 font-bold uppercase">Staff Salary & Payroll</span>}
                   </div>
                 </div>
 

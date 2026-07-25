@@ -99,6 +99,21 @@ export const INITIAL_COURSES: Course[] = [
     active: true,
     createdAt: '2026-03-01',
   },
+  {
+    id: 'course-cw-2026',
+    code: 'CW-2026',
+    name: 'Short Computer Course (Course-Wise Fee)',
+    baseCourseType: 'Course Wise',
+    durationMonths: 2,
+    monthlyFee: 0,
+    admissionFee: 0,
+    examFeeSem1: 0,
+    examFeeSem2: 0,
+    totalCourseFee: 8000,
+    description: 'Fixed lump-sum course fee package. Monthly tuition and admission fees are disabled for this course.',
+    active: true,
+    createdAt: '2026-03-05',
+  },
 ];
 
 export const INITIAL_STUDENTS: Student[] = [];

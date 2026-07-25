@@ -144,24 +144,24 @@ export const StudentDirectory: React.FC<StudentDirectoryProps> = ({
     <div className="space-y-6 max-w-7xl mx-auto text-[#1A1A1A]">
       
       {/* Top Banner */}
-      <div className="bg-white border-2 border-[#1A1A1A] p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-center space-x-3">
-          <div className="w-12 h-12 bg-[#1A1A1A] text-white flex items-center justify-center shrink-0 font-serif italic text-2xl font-bold">
+      <div className="bg-white border-2 border-[#1A1A1A] p-4 sm:p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-center space-x-3 min-w-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#1A1A1A] text-white flex items-center justify-center shrink-0 font-serif italic text-xl sm:text-2xl font-bold">
             St
           </div>
-          <div>
-            <h2 className="font-serif italic font-bold text-2xl text-[#1A1A1A]">Students List & Course Directory</h2>
+          <div className="min-w-0">
+            <h2 className="font-serif italic font-bold text-xl sm:text-2xl text-[#1A1A1A]">Students List & Course Directory</h2>
             <p className="text-[10px] uppercase tracking-widest text-[#1A1A1A]/70 font-bold">Filter by course, search records & manage student details</p>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0 w-full md:w-auto">
           {(isSuperAdmin || userPermissions?.canAddStudent) && onNavigateToAddStudent && (
             <button
               onClick={onNavigateToAddStudent}
-              className="px-4 py-2.5 bg-[#1A1A1A] hover:bg-[#333] text-white font-bold text-xs uppercase tracking-widest border border-[#1A1A1A] flex items-center space-x-2 transition"
+              className="w-full sm:w-auto justify-center px-4 py-2.5 bg-[#1A1A1A] hover:bg-[#333] text-white font-bold text-xs uppercase tracking-widest border border-[#1A1A1A] flex items-center space-x-2 transition"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4 shrink-0" />
               <span>New Admission / Add Student</span>
             </button>
           )}

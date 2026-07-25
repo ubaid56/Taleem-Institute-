@@ -32,7 +32,7 @@ export const CourseManager: React.FC<CourseManagerProps> = ({
   const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
   const [courseToDelete, setCourseToDelete] = useState<Course | null>(null);
 
-  const defaultBaseCategories = ['DIT', 'CIT', 'English Language', 'Web Development', 'Graphics Designing', 'YouTube Automation', 'Other'];
+  const defaultBaseCategories = ['DIT', 'CIT', 'English Language', 'Web Development', 'Graphics Designing', 'YouTube Automation', 'Course Wise', 'Other'];
   const allBaseCategories = Array.from(new Set([...defaultBaseCategories, ...(customBaseCategories || [])]));
 
   // New Course Fields
@@ -44,6 +44,7 @@ export const CourseManager: React.FC<CourseManagerProps> = ({
   const [admissionFee, setAdmissionFee] = useState(3000);
   const [examFeeSem1, setExamFeeSem1] = useState(1500);
   const [examFeeSem2, setExamFeeSem2] = useState(1500);
+  const [totalCourseFee, setTotalCourseFee] = useState(8000);
   const [description, setDescription] = useState('');
 
   const resetForm = () => {
@@ -55,6 +56,7 @@ export const CourseManager: React.FC<CourseManagerProps> = ({
     setAdmissionFee(3000);
     setExamFeeSem1(1500);
     setExamFeeSem2(1500);
+    setTotalCourseFee(8000);
     setDescription('');
     setShowAddForm(false);
     setEditingCourseId(null);
@@ -63,6 +65,8 @@ export const CourseManager: React.FC<CourseManagerProps> = ({
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
+
+    const isCourseWise = baseCourseType === 'Course Wise';
 
     if (editingCourseId) {
       const existing = courses.find(c => c.id === editingCourseId);
@@ -73,10 +77,11 @@ export const CourseManager: React.FC<CourseManagerProps> = ({
           code: code.trim() || name.slice(0, 4).toUpperCase(),
           baseCourseType,
           durationMonths: Number(durationMonths) || 1,
-          monthlyFee: Number(monthlyFee) || 0,
-          admissionFee: Number(admissionFee) || 0,
+          monthlyFee: isCourseWise ? 0 : Number(monthlyFee) || 0,
+          admissionFee: isCourseWise ? 0 : Number(admissionFee) || 0,
           examFeeSem1: baseCourseType === 'DIT' ? Number(examFeeSem1) || 0 : 0,
           examFeeSem2: baseCourseType === 'DIT' ? Number(examFeeSem2) || 0 : 0,
+          totalCourseFee: isCourseWise ? Number(totalCourseFee) || 0 : ((Number(durationMonths) || 1) * (Number(monthlyFee) || 0) + (Number(admissionFee) || 0)),
           description: description.trim(),
         });
       }
@@ -87,10 +92,11 @@ export const CourseManager: React.FC<CourseManagerProps> = ({
         code: code.trim() || `${baseCourseType}-${new Date().getFullYear()}`,
         baseCourseType,
         durationMonths: Number(durationMonths) || 1,
-        monthlyFee: Number(monthlyFee) || 0,
-        admissionFee: Number(admissionFee) || 0,
+        monthlyFee: isCourseWise ? 0 : Number(monthlyFee) || 0,
+        admissionFee: isCourseWise ? 0 : Number(admissionFee) || 0,
         examFeeSem1: baseCourseType === 'DIT' ? Number(examFeeSem1) || 0 : 0,
         examFeeSem2: baseCourseType === 'DIT' ? Number(examFeeSem2) || 0 : 0,
+        totalCourseFee: isCourseWise ? Number(totalCourseFee) || 0 : ((Number(durationMonths) || 1) * (Number(monthlyFee) || 0) + (Number(admissionFee) || 0)),
         description: description.trim(),
         active: true,
         createdAt: new Date().toISOString().slice(0, 10),
@@ -111,6 +117,7 @@ export const CourseManager: React.FC<CourseManagerProps> = ({
     setAdmissionFee(course.admissionFee);
     setExamFeeSem1(course.examFeeSem1);
     setExamFeeSem2(course.examFeeSem2);
+    setTotalCourseFee(course.totalCourseFee || (course.durationMonths * course.monthlyFee + course.admissionFee));
     setDescription(course.description || '');
     setShowAddForm(true);
   };
@@ -124,27 +131,27 @@ export const CourseManager: React.FC<CourseManagerProps> = ({
     <div className="space-y-6 max-w-6xl mx-auto text-[#1A1A1A]">
       
       {/* Header */}
-      <div className="bg-white border-2 border-[#1A1A1A] p-6 shadow-sm flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="w-12 h-12 bg-[#1A1A1A] text-white flex items-center justify-center shrink-0 font-serif italic text-2xl font-bold">
+      <div className="bg-white border-2 border-[#1A1A1A] p-4 sm:p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-center space-x-3 min-w-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#1A1A1A] text-white flex items-center justify-center shrink-0 font-serif italic text-xl sm:text-2xl font-bold">
             Cm
           </div>
-          <div>
-            <h2 className="font-serif italic font-bold text-2xl text-[#1A1A1A]">Course & Batch Management</h2>
-            <p className="text-[10px] uppercase tracking-widest text-[#1A1A1A]/70 font-bold">Add & manage courses, batches (DIT 2026-27, CIT, English, Web Dev), duration & fee rules</p>
+          <div className="min-w-0">
+            <h2 className="font-serif italic font-bold text-xl sm:text-2xl text-[#1A1A1A] leading-tight">Course & Batch Management</h2>
+            <p className="text-[10px] uppercase tracking-widest text-[#1A1A1A]/70 font-bold leading-normal">Add & manage courses, batches (DIT 2026-27, CIT, English, Web Dev), duration & fee rules</p>
           </div>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full md:w-auto shrink-0">
           {currentRole === 'super_admin' && (
             <button
               onClick={() => {
                 setNewCategoryInput('');
                 setShowAddCategoryModal(true);
               }}
-              className="px-4 py-2.5 bg-white hover:bg-[#F4F2EE] text-[#1A1A1A] font-bold text-xs uppercase tracking-widest border-2 border-[#1A1A1A] flex items-center space-x-2 transition"
+              className="flex-1 sm:flex-none justify-center px-3.5 sm:px-4 py-2.5 bg-white hover:bg-[#F4F2EE] text-[#1A1A1A] font-bold text-xs uppercase tracking-widest border-2 border-[#1A1A1A] flex items-center space-x-2 transition"
             >
-              <Layers className="w-4 h-4" />
+              <Layers className="w-4 h-4 shrink-0" />
               <span>Add Base Category</span>
             </button>
           )}
@@ -154,9 +161,9 @@ export const CourseManager: React.FC<CourseManagerProps> = ({
               resetForm();
               setShowAddForm(true);
             }}
-            className="px-4 py-2.5 bg-[#1A1A1A] hover:bg-[#333] text-white font-bold text-xs uppercase tracking-widest border border-[#1A1A1A] flex items-center space-x-2 transition"
+            className="flex-1 sm:flex-none justify-center px-3.5 sm:px-4 py-2.5 bg-[#1A1A1A] hover:bg-[#333] text-white font-bold text-xs uppercase tracking-widest border border-[#1A1A1A] flex items-center space-x-2 transition"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 shrink-0" />
             <span>Add New Course / Batch</span>
           </button>
         </div>
@@ -275,35 +282,65 @@ export const CourseManager: React.FC<CourseManagerProps> = ({
                 />
               </div>
 
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-[#1A1A1A] mb-1">
-                  Monthly Fee (PKR) *
-                </label>
-                <input
-                  type="number"
-                  required
-                  min="0"
-                  value={monthlyFee}
-                  onChange={(e) => setMonthlyFee(Number(e.target.value))}
-                  placeholder="2000"
-                  className="w-full bg-[#FDFCFB] border border-[#1A1A1A] px-3.5 py-2 text-xs text-[#1A1A1A] font-mono focus:bg-white focus:outline-none"
-                />
-              </div>
+              {baseCourseType === 'Course Wise' ? (
+                <>
+                  <div className="md:col-span-2">
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-amber-900 mb-1">
+                      Total Course Package Fee (Lump-Sum) *
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      value={totalCourseFee}
+                      onChange={(e) => setTotalCourseFee(Number(e.target.value))}
+                      placeholder="8000"
+                      className="w-full bg-amber-50 border-2 border-amber-800 px-3.5 py-2 text-xs text-[#1A1A1A] font-mono font-bold focus:bg-white focus:outline-none"
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-[#1A1A1A] mb-1">
-                  Admission Fee (PKR) *
-                </label>
-                <input
-                  type="number"
-                  required
-                  min="0"
-                  value={admissionFee}
-                  onChange={(e) => setAdmissionFee(Number(e.target.value))}
-                  placeholder="3000"
-                  className="w-full bg-[#FDFCFB] border border-[#1A1A1A] px-3.5 py-2 text-xs text-[#1A1A1A] font-mono focus:bg-white focus:outline-none"
-                />
-              </div>
+                  <div className="md:col-span-3 bg-amber-50 border border-amber-800 p-3 rounded text-xs text-amber-900 font-medium space-y-1">
+                    <p className="font-bold flex items-center space-x-1">
+                      <span>📌 Course Wise Fee Structure Enabled</span>
+                    </p>
+                    <p className="text-[11px] leading-relaxed">
+                      For <strong>Course Wise</strong> courses, monthly tuition fee and admission fee items are automatically disabled (set to Rs 0). Students enrolled under this category are charged only this fixed lump-sum total course fee.
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-[#1A1A1A] mb-1">
+                      Monthly Fee (PKR) *
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      value={monthlyFee}
+                      onChange={(e) => setMonthlyFee(Number(e.target.value))}
+                      placeholder="2000"
+                      className="w-full bg-[#FDFCFB] border border-[#1A1A1A] px-3.5 py-2 text-xs text-[#1A1A1A] font-mono focus:bg-white focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-[#1A1A1A] mb-1">
+                      Admission Fee (PKR) *
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      value={admissionFee}
+                      onChange={(e) => setAdmissionFee(Number(e.target.value))}
+                      placeholder="3000"
+                      className="w-full bg-[#FDFCFB] border border-[#1A1A1A] px-3.5 py-2 text-xs text-[#1A1A1A] font-mono focus:bg-white focus:outline-none"
+                    />
+                  </div>
+                </>
+              )}
 
               {baseCourseType === 'DIT' && (
                 <>
@@ -377,7 +414,10 @@ export const CourseManager: React.FC<CourseManagerProps> = ({
         {courses.map(course => {
           const count = getEnrolledCount(course.id);
           const isDit = course.baseCourseType === 'DIT';
-          const totalFeeForCourse = (course.durationMonths * course.monthlyFee) + course.admissionFee + course.examFeeSem1 + course.examFeeSem2;
+          const isCourseWise = course.baseCourseType === 'Course Wise';
+          const totalFeeForCourse = isCourseWise 
+            ? (course.totalCourseFee || 0)
+            : ((course.durationMonths * course.monthlyFee) + course.admissionFee + course.examFeeSem1 + course.examFeeSem2);
 
           return (
             <div
@@ -387,13 +427,20 @@ export const CourseManager: React.FC<CourseManagerProps> = ({
               <div>
                 <div className="flex items-start justify-between">
                   <div>
-                    <span className="text-[10px] font-mono px-2 py-0.5 bg-[#F4F2EE] text-[#1A1A1A] font-bold border border-[#1A1A1A]">
-                      {course.code}
-                    </span>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-[10px] font-mono px-2 py-0.5 bg-[#F4F2EE] text-[#1A1A1A] font-bold border border-[#1A1A1A]">
+                        {course.code}
+                      </span>
+                      {isCourseWise && (
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 bg-amber-100 text-amber-900 border border-amber-600 font-mono">
+                          COURSE WISE
+                        </span>
+                      )}
+                    </div>
                     <h3 className="font-serif italic font-bold text-lg text-[#1A1A1A] mt-2">{course.name}</h3>
                   </div>
 
-                  <span className="text-xs px-2.5 py-1 bg-[#1A1A1A] text-white border border-[#1A1A1A] font-bold flex items-center space-x-1">
+                  <span className="text-xs px-2.5 py-1 bg-[#1A1A1A] text-white border border-[#1A1A1A] font-bold flex items-center space-x-1 shrink-0">
                     <Users className="w-3 h-3" />
                     <span>{count} Enrolled</span>
                   </span>
@@ -410,11 +457,15 @@ export const CourseManager: React.FC<CourseManagerProps> = ({
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[#1A1A1A]/60 font-bold uppercase text-[10px]">Monthly Fee:</span>
-                    <span className="font-mono text-emerald-800 font-bold">{formatPKR(course.monthlyFee)}</span>
+                    <span className={`font-mono font-bold ${isCourseWise ? 'text-amber-800 text-[11px]' : 'text-emerald-800'}`}>
+                      {isCourseWise ? 'N/A (Disabled)' : formatPKR(course.monthlyFee)}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[#1A1A1A]/60 font-bold uppercase text-[10px]">Admission Fee:</span>
-                    <span className="font-mono text-[#1A1A1A]">{formatPKR(course.admissionFee)}</span>
+                    <span className={`font-mono ${isCourseWise ? 'text-amber-800 text-[11px]' : 'text-[#1A1A1A]'}`}>
+                      {isCourseWise ? 'N/A (Disabled)' : formatPKR(course.admissionFee)}
+                    </span>
                   </div>
                   {isDit && (
                     <div className="flex justify-between text-[#1A1A1A] text-[11px]">
@@ -423,8 +474,8 @@ export const CourseManager: React.FC<CourseManagerProps> = ({
                     </div>
                   )}
                   <div className="flex justify-between font-bold pt-1 border-t border-[#1A1A1A] text-[#1A1A1A]">
-                    <span className="uppercase text-[10px]">Total Package:</span>
-                    <span className="font-mono">{formatPKR(totalFeeForCourse)}</span>
+                    <span className="uppercase text-[10px]">{isCourseWise ? 'Total Course Fee:' : 'Total Package:'}</span>
+                    <span className="font-mono text-emerald-800 font-extrabold">{formatPKR(totalFeeForCourse)}</span>
                   </div>
                 </div>
               </div>

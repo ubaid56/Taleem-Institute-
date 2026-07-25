@@ -129,13 +129,13 @@ export const PassOutSuspendedView: React.FC<PassOutSuspendedViewProps> = ({
     <div className="space-y-6 max-w-6xl mx-auto text-[#1A1A1A]">
       
       {/* Header Banner */}
-      <div className="bg-white border-2 border-[#1A1A1A] p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-center space-x-3">
-          <div className="w-12 h-12 bg-[#1a365d] text-white flex items-center justify-center shrink-0 font-serif italic text-2xl font-bold rounded">
+      <div className="bg-white border-2 border-[#1A1A1A] p-4 sm:p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-center space-x-3 min-w-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#1a365d] text-white flex items-center justify-center shrink-0 font-serif italic text-xl sm:text-2xl font-bold rounded">
             {isPassOutMode ? 'Po' : 'Su'}
           </div>
-          <div>
-            <h2 className="font-serif italic font-bold text-2xl text-[#1A1A1A]">
+          <div className="min-w-0">
+            <h2 className="font-serif italic font-bold text-xl sm:text-2xl text-[#1A1A1A]">
               {isPassOutMode ? 'Pass Out Students Module' : 'Suspended Students Module'}
             </h2>
             <p className="text-[10px] uppercase tracking-widest text-[#1A1A1A]/70 font-bold">
@@ -146,7 +146,7 @@ export const PassOutSuspendedView: React.FC<PassOutSuspendedViewProps> = ({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 shrink-0 w-full md:w-auto">
           {(isSuperAdmin || userPermissions?.canManageStatus) ? (
             <button
               onClick={() => setShowMoveModal(true)}

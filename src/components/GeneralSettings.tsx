@@ -3,6 +3,15 @@ import { InstituteSettings } from '../types';
 import { DEFAULT_SETTINGS } from '../data/initialData';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { 
+  getCourses,
+  getStudents,
+  getTransactions,
+  getAttendance,
+  getUsers,
+  getExpenses,
+  getSalaryRecords
+} from '../lib/storage';
+import { 
   Building2, 
   MapPin, 
   Phone, 
@@ -17,7 +26,9 @@ import {
   Globe, 
   Sparkles,
   ShieldCheck,
-  FileCheck2
+  FileCheck2,
+  Download,
+  Database
 } from 'lucide-react';
 
 interface GeneralSettingsProps {
@@ -54,9 +65,33 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
     }
   };
 
+  const exportDatabaseJson = () => {
+    const dbState = {
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      settings: formData,
+      courses: getCourses(),
+      students: getStudents(),
+      transactions: getTransactions(),
+      attendance: getAttendance(),
+      users: getUsers(),
+      expenses: getExpenses(),
+      salaryRecords: getSalaryRecords(),
+    };
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dbState, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `tist_database_backup_${new Date().toISOString().slice(0,10)}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     onSaveSettings(formData);
+    // Automatically export JSON database backup to browser's download folder when General Settings are updated
+    exportDatabaseJson();
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 3000);
   };
@@ -72,16 +107,16 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
     <div className="space-y-8 max-w-6xl mx-auto pb-12">
       
       {/* Colorful Header Banner */}
-      <div className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-purple-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl border border-indigo-700/50 relative overflow-hidden">
+      <div className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-purple-900 rounded-3xl p-4 sm:p-8 text-white shadow-xl border border-indigo-700/50 relative overflow-hidden">
         <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="flex items-center space-x-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-500 p-0.5 shadow-lg flex items-center justify-center shrink-0">
+          <div className="flex items-center space-x-3 sm:space-x-4 min-w-0">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-500 p-0.5 shadow-lg flex items-center justify-center shrink-0">
               <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center text-white">
-                <Building2 className="w-8 h-8 text-indigo-400" />
+                <Building2 className="w-6 h-6 sm:w-8 sm:h-8 text-indigo-400" />
               </div>
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center space-x-2">
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
                   Global Configuration
@@ -349,6 +384,36 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Card 4: Database Backup & Export Module */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-6">
+            <div className="flex items-center space-x-3 pb-4 border-b border-slate-100">
+              <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl">
+                <Database className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="font-bold text-base text-slate-900">Database Backup & JSON Export</h2>
+                <p className="text-xs text-slate-500">Manual backup & auto-export configuration</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
+              <div>
+                <h3 className="text-xs font-bold text-slate-800">Instant Full JSON Database Backup</h3>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Downloads a complete JSON snapshot of all students, courses, fee transactions, attendance, staff, and settings. Also auto-exports on every Settings save.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={exportDatabaseJson}
+                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md flex items-center space-x-2 shrink-0 transition"
+              >
+                <Download className="w-4 h-4" />
+                <span>Download JSON Backup</span>
+              </button>
             </div>
           </div>
 

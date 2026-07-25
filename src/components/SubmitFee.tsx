@@ -87,6 +87,32 @@ export const SubmitFee: React.FC<SubmitFeeProps> = ({
     return students.find(s => s.studentId === selectedStudentId || s.id === selectedStudentId);
   }, [students, selectedStudentId]);
 
+  const isCourseWiseStudent = useMemo(() => {
+    if (!selectedStudent) return false;
+    return selectedStudent.courses.some(sc => {
+      const foundCourse = courses.find(c => c.id === sc.courseId);
+      return foundCourse?.baseCourseType === 'Course Wise' || (sc.monthlyFee === 0 && sc.admissionFee === 0 && sc.totalCalculatedFee > 0);
+    });
+  }, [selectedStudent, courses]);
+
+  // Sync selected student's custom assigned fees automatically
+  React.useEffect(() => {
+    if (selectedStudent) {
+      if (isCourseWiseStudent) {
+        setIncludeMonthly(false);
+        setIncludeAdmission(false);
+      }
+      const customMonthly = selectedStudent.assignedMonthlyFee ?? selectedStudent.courses?.[0]?.monthlyFee ?? 1500;
+      const customAdmission = selectedStudent.assignedAdmissionFee ?? selectedStudent.courses?.[0]?.admissionFee ?? 1000;
+      const customExam = selectedStudent.assignedExamFee ?? selectedStudent.courses?.[0]?.examFeeSem1 ?? 5000;
+
+      setMonthlyFeeAmount(customMonthly);
+      setAdmissionFeeAmount(customAdmission);
+      setExamFeeAmount(customExam);
+      setIsManualAmount(false);
+    }
+  }, [selectedStudent, isCourseWiseStudent]);
+
   // Selected student's past transactions
   const studentHistory = useMemo(() => {
     if (!selectedStudent) return [];
@@ -146,27 +172,28 @@ export const SubmitFee: React.FC<SubmitFeeProps> = ({
 
     onSubmitFee(newTx, updatedStudent);
     setSuccessTx(newTx);
+    onOpenReceipt(newTx);
   };
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto text-[#1A1A1A]">
       
       {/* Top Banner */}
-      <div className="bg-white border-2 border-[#1A1A1A] p-6 shadow-sm flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="w-12 h-12 bg-[#1A1A1A] text-white flex items-center justify-center shrink-0 font-serif italic text-2xl font-bold">
+      <div className="bg-white border-2 border-[#1A1A1A] p-4 sm:p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-center space-x-3 min-w-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#1A1A1A] text-white flex items-center justify-center shrink-0 font-serif italic text-xl sm:text-2xl font-bold">
             Rs
           </div>
-          <div>
-            <h2 className="font-serif italic font-bold text-2xl text-[#1A1A1A]">Fee Submission Desk</h2>
+          <div className="min-w-0">
+            <h2 className="font-serif italic font-bold text-xl sm:text-2xl text-[#1A1A1A]">Fee Submission Desk</h2>
             <p className="text-[10px] uppercase tracking-widest text-[#1A1A1A]/70 font-bold">Collect fee, auto calculate remaining dues & print thermal receipt</p>
           </div>
         </div>
 
-        <div className="text-right hidden sm:block">
-          <span className="text-[10px] text-[#1A1A1A] uppercase tracking-widest font-bold">Auto Thermal Format</span>
-          <p className="text-xs font-bold text-[#1A1A1A] flex items-center justify-end gap-1">
-            <Printer className="w-3.5 h-3.5" /> 80mm Dual Copy (Student & Institute)
+        <div className="text-left md:text-right shrink-0">
+          <span className="text-[10px] text-[#1A1A1A] uppercase tracking-widest font-bold block">Auto Thermal Format</span>
+          <p className="text-xs font-bold text-[#1A1A1A] flex items-center md:justify-end gap-1">
+            <Printer className="w-3.5 h-3.5 shrink-0" /> 80mm Dual Copy (Student & Institute)
           </p>
         </div>
       </div>
@@ -224,7 +251,9 @@ export const SubmitFee: React.FC<SubmitFeeProps> = ({
                     onClick={() => {
                       setSelectedStudentId(student.studentId);
                       setSuccessTx(null);
-                      setPayAmount(student.balanceRemaining > 0 ? Math.min(1500, student.balanceRemaining) : 1500);
+                      const assignedMonthly = student.courses[0]?.monthlyFee || 1500;
+                      setMonthlyFeeAmount(assignedMonthly);
+                      setPayAmount(assignedMonthly);
                     }}
                     className={`p-3 border cursor-pointer transition flex items-center space-x-3 ${
                       isSelected
@@ -320,15 +349,29 @@ export const SubmitFee: React.FC<SubmitFeeProps> = ({
 
                 {/* Breakdown Item Checkboxes & Inputs */}
                 <div className="bg-[#F4F2EE] p-4 border border-[#1A1A1A] space-y-3">
-                  <p className="text-[10px] uppercase tracking-widest font-bold text-[#1A1A1A]">Select Fee Types Collected:</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] uppercase tracking-widest font-bold text-[#1A1A1A]">Select Fee Types Collected:</p>
+                    {isCourseWiseStudent && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-100 text-amber-900 border border-amber-600 uppercase tracking-wider">
+                        Course Wise Student
+                      </span>
+                    )}
+                  </div>
+
+                  {isCourseWiseStudent && (
+                    <div className="bg-amber-50 border border-amber-600 p-2.5 rounded text-xs text-amber-950 font-medium leading-relaxed">
+                      📌 <strong>Course Wise Enrolled:</strong> Monthly tuition fees and admission fees are disabled for course-wise students. Submitted amounts are credited toward the total course package balance.
+                    </div>
+                  )}
                   
                   {/* 1. Monthly Tuition Fee */}
-                  <div className="p-2.5 bg-white border border-[#1A1A1A] space-y-2">
+                  <div className={`p-2.5 bg-white border border-[#1A1A1A] space-y-2 ${isCourseWiseStudent ? 'opacity-50 pointer-events-none' : ''}`}>
                     <div className="flex items-center justify-between">
                       <label className="flex items-center space-x-2 text-xs font-bold text-[#1A1A1A] cursor-pointer">
                         <input
                           type="checkbox"
-                          checked={includeMonthly}
+                          disabled={isCourseWiseStudent}
+                          checked={includeMonthly && !isCourseWiseStudent}
                           onChange={(e) => {
                             setIncludeMonthly(e.target.checked);
                             setIsManualAmount(false);
@@ -336,11 +379,12 @@ export const SubmitFee: React.FC<SubmitFeeProps> = ({
                           className="w-4 h-4 accent-[#1A1A1A]"
                         />
                         <span>📅 Monthly Tuition Fee</span>
+                        {isCourseWiseStudent && <span className="text-[9px] text-amber-800 font-normal">(N/A for Course Wise)</span>}
                       </label>
                       <span className="text-[10px] text-[#1A1A1A]/70 font-mono">Month:</span>
                     </div>
 
-                    {includeMonthly && (
+                    {includeMonthly && !isCourseWiseStudent && (
                       <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-200">
                         <div>
                           <label className="block text-[9px] uppercase font-bold text-[#1A1A1A]">Month Name</label>
@@ -405,12 +449,13 @@ export const SubmitFee: React.FC<SubmitFeeProps> = ({
                   </div>
 
                   {/* 3. Admission / Registration Fee */}
-                  <div className="p-2.5 bg-white border border-[#1A1A1A] space-y-2">
+                  <div className={`p-2.5 bg-white border border-[#1A1A1A] space-y-2 ${isCourseWiseStudent ? 'opacity-50 pointer-events-none' : ''}`}>
                     <div className="flex items-center justify-between">
                       <label className="flex items-center space-x-2 text-xs font-bold text-[#1A1A1A] cursor-pointer">
                         <input
                           type="checkbox"
-                          checked={includeAdmission}
+                          disabled={isCourseWiseStudent}
+                          checked={includeAdmission && !isCourseWiseStudent}
                           onChange={(e) => {
                             setIncludeAdmission(e.target.checked);
                             setIsManualAmount(false);
@@ -418,10 +463,11 @@ export const SubmitFee: React.FC<SubmitFeeProps> = ({
                           className="w-4 h-4 accent-[#1A1A1A]"
                         />
                         <span>🎓 Admission / Registration Fee</span>
+                        {isCourseWiseStudent && <span className="text-[9px] text-amber-800 font-normal">(N/A for Course Wise)</span>}
                       </label>
                     </div>
 
-                    {includeAdmission && (
+                    {includeAdmission && !isCourseWiseStudent && (
                       <div className="pt-1 border-t border-slate-200">
                         <label className="block text-[9px] uppercase font-bold text-[#1A1A1A]">Admission Fee Amount (PKR)</label>
                         <input

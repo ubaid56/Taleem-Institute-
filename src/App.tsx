@@ -54,6 +54,7 @@ import { ExpenseManager } from './components/ExpenseManager';
 import { StaffPayrollManager } from './components/StaffPayrollManager';
 import { ProfitLossReport } from './components/ProfitLossReport';
 import { LoginForm } from './components/LoginForm';
+import { BackupManager } from './components/BackupManager';
 
 export default function App() {
   // Application Persistence State
@@ -681,6 +682,22 @@ export default function App() {
             <GeneralSettings
               settings={settings}
               onSaveSettings={handleUpdateSettings}
+            />
+          )}
+
+          {activeTab === 'backup' && (
+            <BackupManager
+              showToast={showToast}
+              onRefreshData={() => {
+                setCoursesState(getCourses());
+                setStudentsState(getStudents());
+                setTransactionsState(getTransactions());
+                setAttendanceState(getAttendance());
+                setUsersState(getUsers());
+                setExpensesState(getExpenses());
+                setSalaryRecordsState(getSalaryRecords());
+                setSettingsState(getSettings());
+              }}
             />
           )}
 

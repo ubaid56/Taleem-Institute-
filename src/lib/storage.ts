@@ -62,7 +62,7 @@ export const saveSalaryRecords = (records: StaffSalaryRecord[]) => safeSave(STOR
 export const getCurrentRole = (): UserRole => safeParse(STORAGE_KEYS.CURRENT_ROLE, 'super_admin');
 export const setCurrentRole = (role: UserRole) => safeSave(STORAGE_KEYS.CURRENT_ROLE, role);
 
-export const getIsLoggedIn = (): boolean => safeParse(STORAGE_KEYS.IS_LOGGED_IN, false);
+export const getIsLoggedIn = (): boolean => safeParse(STORAGE_KEYS.IS_LOGGED_IN, true);
 export const setIsLoggedInState = (val: boolean) => safeSave(STORAGE_KEYS.IS_LOGGED_IN, val);
 
 export const getLoggedInUser = (): StaffUser | null => safeParse(STORAGE_KEYS.LOGGED_IN_USER, null);
@@ -70,13 +70,26 @@ export const setLoggedInUserState = (user: StaffUser | null) => safeSave(STORAGE
 
 // Reset storage to demo defaults
 export const resetToDefaultData = () => {
+  localStorage.removeItem('tist_explicitly_cleared');
   safeSave(STORAGE_KEYS.COURSES, INITIAL_COURSES);
   safeSave(STORAGE_KEYS.STUDENTS, INITIAL_STUDENTS);
   safeSave(STORAGE_KEYS.TRANSACTIONS, INITIAL_TRANSACTIONS);
   safeSave(STORAGE_KEYS.ATTENDANCE, INITIAL_ATTENDANCE);
   safeSave(STORAGE_KEYS.USERS, INITIAL_USERS);
+  safeSave(STORAGE_KEYS.EXPENSES, INITIAL_EXPENSES);
+  safeSave(STORAGE_KEYS.SALARY_RECORDS, INITIAL_SALARY_RECORDS);
   safeSave(STORAGE_KEYS.CURRENT_ROLE, 'super_admin');
   safeSave(STORAGE_KEYS.SETTINGS, DEFAULT_SETTINGS);
   safeSave(STORAGE_KEYS.IS_LOGGED_IN, true);
+};
+
+// Secret Complete Database Wipe for Super Admin
+export const wipeAllDataCompletely = () => {
+  localStorage.setItem('tist_explicitly_cleared', 'true');
+  safeSave(STORAGE_KEYS.STUDENTS, []);
+  safeSave(STORAGE_KEYS.TRANSACTIONS, []);
+  safeSave(STORAGE_KEYS.ATTENDANCE, []);
+  safeSave(STORAGE_KEYS.EXPENSES, []);
+  safeSave(STORAGE_KEYS.SALARY_RECORDS, []);
 };
 

@@ -99,22 +99,22 @@ export const FeeRecords: React.FC<FeeRecordsProps> = ({
     <div className="space-y-6 max-w-6xl mx-auto text-[#1A1A1A]">
       
       {/* Header */}
-      <div className="bg-white border-2 border-[#1A1A1A] p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-center space-x-3">
-          <div className="w-12 h-12 bg-[#1A1A1A] text-white flex items-center justify-center shrink-0 font-serif italic text-2xl font-bold">
+      <div className="bg-white border-2 border-[#1A1A1A] p-4 sm:p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-center space-x-3 min-w-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#1A1A1A] text-white flex items-center justify-center shrink-0 font-serif italic text-xl sm:text-2xl font-bold">
             Rp
           </div>
-          <div>
-            <h2 className="font-serif italic font-bold text-2xl text-[#1A1A1A]">Fee Records & Financial Reports</h2>
+          <div className="min-w-0">
+            <h2 className="font-serif italic font-bold text-xl sm:text-2xl text-[#1A1A1A]">Fee Records & Financial Reports</h2>
             <p className="text-[10px] uppercase tracking-widest text-[#1A1A1A]/70 font-bold">Daily, weekly, monthly, or date-to-date fee collection logs & student remaining dues</p>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 shrink-0 w-full md:w-auto">
           {onClearAllRecords && (transactions.length > 0 || students.length > 0) && (
             <button
               onClick={() => setShowClearConfirm(true)}
-              className="px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-800 font-bold text-xs uppercase tracking-wider border border-rose-800 transition"
+              className="flex-1 sm:flex-none justify-center px-3.5 sm:px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-800 font-bold text-xs uppercase tracking-wider border border-rose-800 transition"
             >
               Clear All Fee Records
             </button>
@@ -122,9 +122,9 @@ export const FeeRecords: React.FC<FeeRecordsProps> = ({
 
           <button
             onClick={handleExportPDF}
-            className="px-4 py-2.5 bg-[#1A1A1A] hover:bg-[#333] text-white font-bold text-xs uppercase tracking-widest border border-[#1A1A1A] flex items-center space-x-2 transition"
+            className="flex-1 sm:flex-none justify-center px-3.5 sm:px-4 py-2.5 bg-[#1A1A1A] hover:bg-[#333] text-white font-bold text-xs uppercase tracking-widest border border-[#1A1A1A] flex items-center space-x-2 transition"
           >
-            <Download className="w-4 h-4" />
+            <Download className="w-4 h-4 shrink-0" />
             <span>Export Fee PDF Report</span>
           </button>
         </div>

@@ -88,53 +88,89 @@ export async function seedInitialFirestoreDataIfEmpty() {
 
 // REALTIME LISTENERS
 export function subscribeSettings(callback: (settings: InstituteSettings) => void) {
-  return onSnapshot(doc(db, COLLECTIONS.SETTINGS, 'institute'), (docSnap) => {
-    if (docSnap.exists()) {
-      callback(docSnap.data() as InstituteSettings);
+  return onSnapshot(
+    doc(db, COLLECTIONS.SETTINGS, 'institute'),
+    (docSnap) => {
+      if (docSnap.exists()) {
+        callback(docSnap.data() as InstituteSettings);
+      }
+    },
+    (err) => {
+      console.warn('[Firestore] Settings offline/unavailable:', err.message);
     }
-  });
+  );
 }
 
 export function subscribeCourses(callback: (courses: Course[]) => void) {
-  return onSnapshot(collection(db, COLLECTIONS.COURSES), (querySnap) => {
-    const list: Course[] = [];
-    querySnap.forEach((d) => list.push(d.data() as Course));
-    callback(list);
-  });
+  return onSnapshot(
+    collection(db, COLLECTIONS.COURSES),
+    (querySnap) => {
+      const list: Course[] = [];
+      querySnap.forEach((d) => list.push(d.data() as Course));
+      callback(list);
+    },
+    (err) => {
+      console.warn('[Firestore] Courses offline/unavailable:', err.message);
+    }
+  );
 }
 
 export function subscribeStudents(callback: (students: Student[]) => void) {
-  return onSnapshot(collection(db, COLLECTIONS.STUDENTS), (querySnap) => {
-    const list: Student[] = [];
-    querySnap.forEach((d) => list.push(d.data() as Student));
-    callback(list);
-  });
+  return onSnapshot(
+    collection(db, COLLECTIONS.STUDENTS),
+    (querySnap) => {
+      const list: Student[] = [];
+      querySnap.forEach((d) => list.push(d.data() as Student));
+      callback(list);
+    },
+    (err) => {
+      console.warn('[Firestore] Students offline/unavailable:', err.message);
+    }
+  );
 }
 
 export function subscribeTransactions(callback: (txs: FeeTransaction[]) => void) {
-  return onSnapshot(collection(db, COLLECTIONS.TRANSACTIONS), (querySnap) => {
-    const list: FeeTransaction[] = [];
-    querySnap.forEach((d) => list.push(d.data() as FeeTransaction));
-    // Sort by date descending
-    list.sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
-    callback(list);
-  });
+  return onSnapshot(
+    collection(db, COLLECTIONS.TRANSACTIONS),
+    (querySnap) => {
+      const list: FeeTransaction[] = [];
+      querySnap.forEach((d) => list.push(d.data() as FeeTransaction));
+      // Sort by date descending
+      list.sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
+      callback(list);
+    },
+    (err) => {
+      console.warn('[Firestore] Transactions offline/unavailable:', err.message);
+    }
+  );
 }
 
 export function subscribeAttendance(callback: (records: AttendanceRecord[]) => void) {
-  return onSnapshot(collection(db, COLLECTIONS.ATTENDANCE), (querySnap) => {
-    const list: AttendanceRecord[] = [];
-    querySnap.forEach((d) => list.push(d.data() as AttendanceRecord));
-    callback(list);
-  });
+  return onSnapshot(
+    collection(db, COLLECTIONS.ATTENDANCE),
+    (querySnap) => {
+      const list: AttendanceRecord[] = [];
+      querySnap.forEach((d) => list.push(d.data() as AttendanceRecord));
+      callback(list);
+    },
+    (err) => {
+      console.warn('[Firestore] Attendance offline/unavailable:', err.message);
+    }
+  );
 }
 
 export function subscribeUsers(callback: (users: StaffUser[]) => void) {
-  return onSnapshot(collection(db, COLLECTIONS.USERS), (querySnap) => {
-    const list: StaffUser[] = [];
-    querySnap.forEach((d) => list.push(d.data() as StaffUser));
-    callback(list);
-  });
+  return onSnapshot(
+    collection(db, COLLECTIONS.USERS),
+    (querySnap) => {
+      const list: StaffUser[] = [];
+      querySnap.forEach((d) => list.push(d.data() as StaffUser));
+      callback(list);
+    },
+    (err) => {
+      console.warn('[Firestore] Users offline/unavailable:', err.message);
+    }
+  );
 }
 
 // Helper to sanitize objects before sending to Firestore (removes undefined properties)
@@ -276,5 +312,27 @@ export async function dbDeleteUser(userId: string) {
     await deleteDoc(doc(db, COLLECTIONS.USERS, userId));
   } catch (err) {
     console.error('[Firestore Error] Failed to delete user:', err);
+  }
+}
+
+export async function wipeAllFirestoreRecordsCompletely() {
+  localStorage.setItem('tist_explicitly_cleared', 'true');
+  try {
+    const collectionsToClear = [
+      COLLECTIONS.STUDENTS,
+      COLLECTIONS.TRANSACTIONS,
+      COLLECTIONS.ATTENDANCE,
+      'expenses',
+      'salary_records',
+    ];
+    for (const colName of collectionsToClear) {
+      const querySnap = await getDocs(collection(db, colName));
+      for (const docSnap of querySnap.docs) {
+        await deleteDoc(doc(db, colName, docSnap.id));
+      }
+    }
+    console.log('[Firestore] Complete database wipe finished');
+  } catch (err) {
+    console.error('[Firestore Error] Failed to wipe database:', err);
   }
 }

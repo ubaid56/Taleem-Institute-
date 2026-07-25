@@ -54,6 +54,8 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
   );
 
   // Fee Particulars & Discount
+  const [customMonthlyFee, setCustomMonthlyFee] = useState<number | ''>('');
+  const [customAdmissionFee, setCustomAdmissionFee] = useState<number | ''>('');
   const [examFeeSem1, setExamFeeSem1] = useState<number>(1500);
   const [examFeeSem2, setExamFeeSem2] = useState<number>(1500);
   const [otherFee, setOtherFee] = useState<number>(0);
@@ -89,8 +91,13 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
     });
   }, [selectedCourseIds, courses]);
 
-  // Sync exam fees from selected course settings
+  // Sync fee defaults from selected course settings
   useEffect(() => {
+    const nonCourseWise = courses.find(c => selectedCourseIds.includes(c.id) && c.baseCourseType !== 'Course Wise');
+    if (nonCourseWise) {
+      if (customMonthlyFee === '') setCustomMonthlyFee(nonCourseWise.monthlyFee);
+      if (customAdmissionFee === '') setCustomAdmissionFee(nonCourseWise.admissionFee);
+    }
     const firstDit = courses.find(c => selectedCourseIds.includes(c.id) && (c.baseCourseType === 'DIT' || c.name.toLowerCase().includes('dit')));
     if (firstDit) {
       setExamFeeSem1(firstDit.examFeeSem1 ?? 1500);
@@ -107,13 +114,18 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
       const course = courses.find(c => c.id === id);
       if (!course) return;
 
-      const isThisDit = course.baseCourseType === 'DIT' || course.name.toLowerCase().includes('dit');
-      
+      const isCourseWise = course.baseCourseType === 'Course Wise';
+      const isThisDit = (course.baseCourseType === 'DIT' || course.name.toLowerCase().includes('dit')) && !isCourseWise;
+
+      const effectiveMonthly = isCourseWise ? 0 : (customMonthlyFee !== '' ? Number(customMonthlyFee) : course.monthlyFee);
+      const effectiveAdmission = isCourseWise ? 0 : (customAdmissionFee !== '' ? Number(customAdmissionFee) : course.admissionFee);
       const sem1 = isThisDit ? (Number(course.examFeeSem1) || Number(examFeeSem1) || 0) : 0;
       const sem2 = isThisDit ? (Number(course.examFeeSem2) || Number(examFeeSem2) || 0) : 0;
-      const other = Number(otherFee) || 0;
+      const other = isCourseWise ? 0 : (Number(otherFee) || 0);
 
-      const courseSubtotal = (course.durationMonths * course.monthlyFee) + course.admissionFee + sem1 + sem2 + other;
+      const courseSubtotal = isCourseWise 
+        ? (Number(course.totalCourseFee) || 0) 
+        : ((course.durationMonths * effectiveMonthly) + effectiveAdmission + sem1 + sem2 + other);
 
       grossTotal += courseSubtotal;
 
@@ -121,8 +133,8 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
         courseId: course.id,
         courseName: course.name,
         durationMonths: course.durationMonths,
-        monthlyFee: course.monthlyFee,
-        admissionFee: course.admissionFee,
+        monthlyFee: effectiveMonthly,
+        admissionFee: effectiveAdmission,
         examFeeSem1: sem1,
         examFeeSem2: sem2,
         otherFee: other,
@@ -138,7 +150,7 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
     const netTotal = Math.max(0, grossTotal - discount);
 
     return { grossTotal, discount, netTotal, enrollments };
-  }, [selectedCourseIds, courses, examFeeSem1, examFeeSem2, otherFee, otherFeeRemarks, discountAmount, discountRemarks, admissionDate]);
+  }, [selectedCourseIds, courses, customMonthlyFee, customAdmissionFee, examFeeSem1, examFeeSem2, otherFee, otherFeeRemarks, discountAmount, discountRemarks, admissionDate]);
 
   const toggleCourseSelection = (courseId: string) => {
     setSelectedCourseIds(prev => {
@@ -196,6 +208,9 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
       totalFeePaid: paidNow,
       balanceRemaining: balance,
       status: 'active',
+      assignedMonthlyFee: customMonthlyFee !== '' ? Number(customMonthlyFee) : calculatedFeeSummary.enrollments[0]?.monthlyFee,
+      assignedAdmissionFee: customAdmissionFee !== '' ? Number(customAdmissionFee) : calculatedFeeSummary.enrollments[0]?.admissionFee,
+      assignedExamFee: isDitSelected ? Number(examFeeSem1) : undefined,
       qrCodeData: nextStudentId,
       createdAt: new Date().toISOString().slice(0, 10),
     };
@@ -236,21 +251,21 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
   ];
 
   return (
-    <div className="bg-white border-2 border-[#1A1A1A] p-6 shadow-md max-w-5xl mx-auto text-[#1A1A1A]">
+    <div className="bg-white border-2 border-[#1A1A1A] p-4 sm:p-6 shadow-md max-w-5xl mx-auto text-[#1A1A1A]">
       
       {/* Header */}
-      <div className="flex items-center justify-between pb-5 border-b-2 border-[#1A1A1A] mb-6">
-        <div className="flex items-center space-x-3">
-          <div className="w-11 h-11 bg-[#1A1A1A] text-white flex items-center justify-center shrink-0 font-serif italic text-xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-5 border-b-2 border-[#1A1A1A] mb-6 gap-3">
+        <div className="flex items-center space-x-3 min-w-0">
+          <div className="w-10 h-10 sm:w-11 sm:h-11 bg-[#1A1A1A] text-white flex items-center justify-center shrink-0 font-serif italic text-lg sm:text-xl">
             TI
           </div>
-          <div>
-            <h2 className="font-serif italic font-bold text-2xl text-[#1A1A1A]">Student Registration Form</h2>
+          <div className="min-w-0">
+            <h2 className="font-serif italic font-bold text-xl sm:text-2xl text-[#1A1A1A]">Student Registration Form</h2>
             <p className="text-[10px] uppercase tracking-widest opacity-70 font-bold">Taleem Institute of Science & Technology • Admission Module</p>
           </div>
         </div>
 
-        <span className="text-xs px-3 py-1 bg-[#F4F2EE] text-[#1A1A1A] border border-[#1A1A1A] font-mono font-bold">
+        <span className="text-xs px-3 py-1 bg-[#F4F2EE] text-[#1A1A1A] border border-[#1A1A1A] font-mono font-bold self-start sm:self-auto shrink-0">
           ROLL ID: <strong className="underline">{generateNextStudentId(existingStudents)}</strong>
         </span>
       </div>
@@ -477,6 +492,7 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
             {courses.map(course => {
               const isSelected = selectedCourseIds.includes(course.id);
               const isDit = course.baseCourseType === 'DIT' || course.name.toLowerCase().includes('dit');
+              const isCourseWise = course.baseCourseType === 'Course Wise';
 
               return (
                 <div
@@ -495,24 +511,39 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-1">
                       <h4 className={`text-xs font-bold truncate ${isSelected ? 'text-white' : 'text-[#1A1A1A]'}`}>
                         {course.name}
                       </h4>
                       {isDit && (
-                        <span className={`text-[9px] px-1.5 py-0.5 font-bold uppercase border ${
+                        <span className={`text-[9px] px-1.5 py-0.5 font-bold uppercase border shrink-0 ${
                           isSelected ? 'bg-white text-[#1A1A1A] border-white' : 'bg-[#1A1A1A] text-white border-[#1A1A1A]'
                         }`}>
                           DIT
                         </span>
                       )}
+                      {isCourseWise && (
+                        <span className={`text-[9px] px-1.5 py-0.5 font-bold uppercase border shrink-0 ${
+                          isSelected ? 'bg-amber-400 text-amber-950 border-amber-400' : 'bg-amber-100 text-amber-900 border-amber-600'
+                        }`}>
+                          CW
+                        </span>
+                      )}
                     </div>
-                    <p className={`text-[10px] mt-1 ${isSelected ? 'text-slate-300' : 'text-[#1A1A1A]/70'}`}>
-                      Duration: <strong>{course.durationMonths} Months</strong> • Monthly: <strong className="font-mono">{formatPKR(course.monthlyFee)}</strong>
-                    </p>
-                    <p className={`text-[10px] ${isSelected ? 'text-slate-400' : 'text-[#1A1A1A]/60'}`}>
-                      Admission Fee: {formatPKR(course.admissionFee)}
-                    </p>
+                    {isCourseWise ? (
+                      <p className={`text-[10px] mt-1 font-medium ${isSelected ? 'text-amber-300' : 'text-amber-900'}`}>
+                        Total Course Package: <strong className="font-mono">{formatPKR(course.totalCourseFee || 0)}</strong> (No Monthly/Admission Fee)
+                      </p>
+                    ) : (
+                      <>
+                        <p className={`text-[10px] mt-1 ${isSelected ? 'text-slate-300' : 'text-[#1A1A1A]/70'}`}>
+                          Duration: <strong>{course.durationMonths} Months</strong> • Monthly: <strong className="font-mono">{formatPKR(course.monthlyFee)}</strong>
+                        </p>
+                        <p className={`text-[10px] ${isSelected ? 'text-slate-400' : 'text-[#1A1A1A]/60'}`}>
+                          Admission Fee: {formatPKR(course.admissionFee)}
+                        </p>
+                      </>
+                    )}
                   </div>
                 </div>
               );
@@ -528,6 +559,52 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+            {selectedCourseIds.length > 0 && selectedCourseIds.every(id => courses.find(c => c.id === id)?.baseCourseType === 'Course Wise') ? (
+              <div className="md:col-span-2 bg-amber-50 border-2 border-amber-800 p-3 rounded space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-900 block">
+                  📌 Course Wise Fee Mode
+                </span>
+                <p className="text-xs text-amber-900 font-medium leading-relaxed">
+                  Monthly tuition fees and admission fees cannot be added or charged for students enrolled in Course-Wise courses. Only the fixed lump-sum course fee applies.
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Editable Assigned Monthly Fee per Student */}
+                <div className="bg-emerald-50/80 p-3 border-2 border-emerald-800">
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-emerald-950 mb-1 flex items-center justify-between">
+                    <span>Assigned Monthly Fee (PKR)</span>
+                    <span className="text-[9px] bg-emerald-800 text-white px-1.5 py-0.5 rounded font-mono">EDITABLE</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={customMonthlyFee}
+                    onChange={(e) => setCustomMonthlyFee(e.target.value === '' ? '' : Number(e.target.value))}
+                    placeholder="e.g. 1500"
+                    className="w-full bg-white border border-emerald-800 px-3 py-1.5 text-xs text-emerald-950 font-mono font-extrabold focus:outline-none"
+                  />
+                  <p className="text-[9px] text-emerald-800 font-medium mt-1">Set custom discounted monthly fee for this student (e.g. 1200 instead of 1500)</p>
+                </div>
+
+                {/* Editable Assigned Admission Fee per Student */}
+                <div className="bg-white p-3 border border-[#1A1A1A]">
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-[#1A1A1A] mb-1">
+                    Assigned Admission Fee (PKR)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={customAdmissionFee}
+                    onChange={(e) => setCustomAdmissionFee(e.target.value === '' ? '' : Number(e.target.value))}
+                    placeholder="e.g. 1000"
+                    className="w-full bg-[#FDFCFB] border border-[#1A1A1A] px-3 py-1.5 text-xs text-[#1A1A1A] font-mono font-bold"
+                  />
+                  <p className="text-[9px] text-[#1A1A1A]/60 mt-1 uppercase">Custom admission fee for this student</p>
+                </div>
+              </>
+            )}
             
             {/* Show Exam Fees ONLY IF DIT Course is Selected! */}
             {isDitSelected && (

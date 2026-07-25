@@ -74,20 +74,20 @@ export const DefaulterListView: React.FC<DefaulterListViewProps> = ({
     <div className="space-y-6 max-w-7xl mx-auto text-[#1A1A1A]">
       
       {/* Header Banner */}
-      <div className="bg-white border-2 border-[#1A1A1A] p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-center space-x-3">
-          <div className="w-12 h-12 bg-rose-700 text-white flex items-center justify-center shrink-0 font-serif italic text-2xl font-bold">
+      <div className="bg-white border-2 border-[#1A1A1A] p-4 sm:p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-center space-x-3 min-w-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-rose-700 text-white flex items-center justify-center shrink-0 font-serif italic text-xl sm:text-2xl font-bold">
             !
           </div>
-          <div>
-            <h2 className="font-serif italic font-bold text-2xl text-[#1A1A1A]">Fee Defaulters & Due Tracker</h2>
+          <div className="min-w-0">
+            <h2 className="font-serif italic font-bold text-xl sm:text-2xl text-[#1A1A1A]">Fee Defaulters & Due Tracker</h2>
             <p className="text-[10px] uppercase tracking-widest text-[#1A1A1A]/70 font-bold">
               Automatic 5th of Month Due Cutoff • {currentMonthName} • Only Super Admin can exempt/remove from defaulters
             </p>
           </div>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-3 shrink-0">
           <div className="px-4 py-2 bg-rose-50 border-2 border-rose-700 text-rose-900 text-xs font-bold font-mono">
             Defaulters Count: {defaulterStudents.length}
           </div>

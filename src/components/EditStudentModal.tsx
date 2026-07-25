@@ -53,6 +53,14 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
   const [totalFeePaid, setTotalFeePaid] = useState<number>(student.totalFeePaid);
   const [discountTotal, setDiscountTotal] = useState<number>(student.discountTotal || 0);
 
+  // Custom Assigned Fee Per Student
+  const [assignedMonthlyFee, setAssignedMonthlyFee] = useState<number>(
+    student.assignedMonthlyFee ?? student.courses?.[0]?.monthlyFee ?? 1500
+  );
+  const [assignedAdmissionFee, setAssignedAdmissionFee] = useState<number>(
+    student.assignedAdmissionFee ?? student.courses?.[0]?.admissionFee ?? 1000
+  );
+
   const [showConfirmDelete, setShowConfirmDelete] = useState<boolean>(false);
 
   // Local File Photo Upload
@@ -91,7 +99,13 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
     selectedCourseIds.forEach(id => {
       const c = courses.find(course => course.id === id);
       if (c) {
-        newCalculatedTotal += (c.durationMonths * c.monthlyFee) + c.admissionFee;
+        if (c.baseCourseType === 'Course Wise') {
+          newCalculatedTotal += (c.totalCourseFee || 0);
+        } else {
+          const isDit = c.baseCourseType === 'DIT' || c.name.toLowerCase().includes('dit');
+          const examFees = isDit ? ((c.examFeeSem1 || 1500) + (c.examFeeSem2 || 1500)) : 0;
+          newCalculatedTotal += (c.durationMonths * c.monthlyFee) + c.admissionFee + examFees;
+        }
       }
     });
     newCalculatedTotal = Math.max(0, newCalculatedTotal - discountTotal);
@@ -105,23 +119,33 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
     const updatedEnrollments: StudentCourseEnrollment[] = selectedCourseIds.map(id => {
       const courseObj = courses.find(c => c.id === id);
       const existingEnrollment = student.courses.find(c => c.courseId === id);
+      const isCourseWise = courseObj?.baseCourseType === 'Course Wise';
 
       if (existingEnrollment) {
-        return existingEnrollment;
+        return {
+          ...existingEnrollment,
+          monthlyFee: isCourseWise ? 0 : assignedMonthlyFee,
+          admissionFee: isCourseWise ? 0 : assignedAdmissionFee,
+          totalCalculatedFee: isCourseWise ? (courseObj?.totalCourseFee || existingEnrollment.totalCalculatedFee) : existingEnrollment.totalCalculatedFee,
+        };
       }
 
       // New enrollment added during edit
+      const isDit = courseObj ? ((courseObj.baseCourseType === 'DIT' || courseObj.name.toLowerCase().includes('dit')) && !isCourseWise) : false;
+      const examFees = isDit ? ((courseObj?.examFeeSem1 || 1500) + (courseObj?.examFeeSem2 || 1500)) : 0;
+      const courseTotal = isCourseWise ? (courseObj?.totalCourseFee || 0) : (courseObj ? (courseObj.durationMonths * assignedMonthlyFee + assignedAdmissionFee + examFees) : 0);
+
       return {
         courseId: id,
         courseName: courseObj ? courseObj.name : 'Unknown Course',
         durationMonths: courseObj ? courseObj.durationMonths : 1,
-        monthlyFee: courseObj ? courseObj.monthlyFee : 0,
-        admissionFee: courseObj ? courseObj.admissionFee : 0,
-        examFeeSem1: 0,
-        examFeeSem2: 0,
+        monthlyFee: isCourseWise ? 0 : assignedMonthlyFee,
+        admissionFee: isCourseWise ? 0 : assignedAdmissionFee,
+        examFeeSem1: isDit ? (courseObj?.examFeeSem1 || 1500) : 0,
+        examFeeSem2: isDit ? (courseObj?.examFeeSem2 || 1500) : 0,
         otherFee: 0,
         discountAmount: 0,
-        totalCalculatedFee: courseObj ? (courseObj.durationMonths * courseObj.monthlyFee + courseObj.admissionFee) : 0,
+        totalCalculatedFee: courseTotal,
         enrollmentDate: admissionDate,
       };
     });
@@ -140,6 +164,8 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
       cnic,
       fatherCnic,
       admissionDate,
+      assignedMonthlyFee,
+      assignedAdmissionFee,
       courses: updatedEnrollments,
       status,
       statusChangeRemarks,
@@ -156,17 +182,17 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
   const isSuperAdmin = currentRole === 'super_admin';
 
   return (
-    <div className="fixed inset-0 bg-[#1A1A1A]/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto text-[#1A1A1A]">
-      <div className="bg-white border-2 border-[#1A1A1A] max-w-3xl w-full p-6 shadow-2xl my-auto max-h-[92vh] overflow-y-auto space-y-6">
+    <div className="fixed inset-0 bg-[#1A1A1A]/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto text-[#1A1A1A]">
+      <div className="bg-white border-2 border-[#1A1A1A] max-w-3xl w-full p-4 sm:p-6 shadow-2xl my-auto max-h-[92vh] overflow-y-auto space-y-6">
         
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b-2 border-[#1A1A1A]">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-[#1A1A1A] text-white flex items-center justify-center shrink-0 font-serif italic text-xl font-bold">
+        <div className="flex items-center justify-between pb-4 border-b-2 border-[#1A1A1A] gap-2">
+          <div className="flex items-center space-x-3 min-w-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#1A1A1A] text-white flex items-center justify-center shrink-0 font-serif italic text-lg sm:text-xl font-bold">
               Edit
             </div>
-            <div>
-              <h3 className="font-serif italic font-bold text-xl text-[#1A1A1A]">
+            <div className="min-w-0">
+              <h3 className="font-serif italic font-bold text-lg sm:text-xl text-[#1A1A1A]">
                 Edit Full Student Admission Details
               </h3>
               <p className="text-[10px] uppercase tracking-widest text-[#1A1A1A]/70 font-bold">
@@ -408,9 +434,18 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
                       className="w-4 h-4 mt-0.5 accent-[#1A1A1A]"
                     />
                     <div className="flex-1 text-xs">
-                      <span className="font-bold text-[#1A1A1A] block">{c.name}</span>
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="font-bold text-[#1A1A1A] block">{c.name}</span>
+                        {c.baseCourseType === 'Course Wise' && (
+                          <span className="text-[9px] font-bold px-1 bg-amber-100 text-amber-900 border border-amber-600 font-mono">
+                            CW
+                          </span>
+                        )}
+                      </div>
                       <span className="text-[10px] text-[#1A1A1A]/70 font-mono block">
-                        Duration: {c.durationMonths}m • Fee: {formatPKR(c.monthlyFee)}/mo
+                        {c.baseCourseType === 'Course Wise'
+                          ? `Duration: ${c.durationMonths}m • Package: ${formatPKR(c.totalCourseFee || 0)}`
+                          : `Duration: ${c.durationMonths}m • Fee: ${formatPKR(c.monthlyFee)}/mo`}
                       </span>
                     </div>
                   </label>
@@ -463,6 +498,37 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
               <span className="font-mono text-xs font-bold text-rose-800">
                 Current Remaining Balance: {formatPKR(Math.max(0, totalFeeCalculated - totalFeePaid))}
               </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-slate-300">
+              <div className="bg-emerald-50 p-2.5 border border-emerald-700">
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-emerald-950 mb-1 flex items-center justify-between">
+                  <span>Assigned Monthly Fee (PKR)</span>
+                  <span className="text-[9px] bg-emerald-800 text-white px-1 font-mono">EDITABLE</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={assignedMonthlyFee}
+                  onChange={(e) => setAssignedMonthlyFee(Number(e.target.value))}
+                  className="w-full bg-white border border-emerald-800 px-2.5 py-1.5 text-xs text-emerald-950 font-mono font-extrabold focus:outline-none"
+                />
+                <p className="text-[9px] text-emerald-800 mt-1">Default monthly fee used for all future fee submissions for this student (e.g. 1200)</p>
+              </div>
+
+              <div className="bg-white p-2.5 border border-[#1A1A1A]">
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-[#1A1A1A] mb-1">
+                  Assigned Admission Fee (PKR)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={assignedAdmissionFee}
+                  onChange={(e) => setAssignedAdmissionFee(Number(e.target.value))}
+                  className="w-full bg-[#FDFCFB] border border-[#1A1A1A] px-2.5 py-1.5 text-xs font-mono font-bold text-[#1A1A1A]"
+                />
+                <p className="text-[9px] text-[#1A1A1A]/70 mt-1">Custom admission fee for this student</p>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
