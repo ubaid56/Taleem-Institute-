@@ -99,7 +99,7 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
     selectedCourseIds.forEach(id => {
       const c = courses.find(course => course.id === id);
       if (c) {
-        if (c.baseCourseType === 'Course Wise') {
+        if (c.baseCourseType === 'Course Wise' || c.baseCourseType === 'Other') {
           newCalculatedTotal += (c.totalCourseFee || 0);
         } else {
           const isDit = c.baseCourseType === 'DIT' || c.name.toLowerCase().includes('dit');
@@ -119,28 +119,28 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
     const updatedEnrollments: StudentCourseEnrollment[] = selectedCourseIds.map(id => {
       const courseObj = courses.find(c => c.id === id);
       const existingEnrollment = student.courses.find(c => c.courseId === id);
-      const isCourseWise = courseObj?.baseCourseType === 'Course Wise';
+      const isLumpSum = courseObj?.baseCourseType === 'Course Wise' || courseObj?.baseCourseType === 'Other';
 
       if (existingEnrollment) {
         return {
           ...existingEnrollment,
-          monthlyFee: isCourseWise ? 0 : assignedMonthlyFee,
-          admissionFee: isCourseWise ? 0 : assignedAdmissionFee,
-          totalCalculatedFee: isCourseWise ? (courseObj?.totalCourseFee || existingEnrollment.totalCalculatedFee) : existingEnrollment.totalCalculatedFee,
+          monthlyFee: isLumpSum ? 0 : assignedMonthlyFee,
+          admissionFee: isLumpSum ? 0 : assignedAdmissionFee,
+          totalCalculatedFee: isLumpSum ? (courseObj?.totalCourseFee || existingEnrollment.totalCalculatedFee) : existingEnrollment.totalCalculatedFee,
         };
       }
 
       // New enrollment added during edit
-      const isDit = courseObj ? ((courseObj.baseCourseType === 'DIT' || courseObj.name.toLowerCase().includes('dit')) && !isCourseWise) : false;
+      const isDit = courseObj ? ((courseObj.baseCourseType === 'DIT' || courseObj.name.toLowerCase().includes('dit')) && !isLumpSum) : false;
       const examFees = isDit ? ((courseObj?.examFeeSem1 || 1500) + (courseObj?.examFeeSem2 || 1500)) : 0;
-      const courseTotal = isCourseWise ? (courseObj?.totalCourseFee || 0) : (courseObj ? (courseObj.durationMonths * assignedMonthlyFee + assignedAdmissionFee + examFees) : 0);
+      const courseTotal = isLumpSum ? (courseObj?.totalCourseFee || 0) : (courseObj ? (courseObj.durationMonths * assignedMonthlyFee + assignedAdmissionFee + examFees) : 0);
 
       return {
         courseId: id,
         courseName: courseObj ? courseObj.name : 'Unknown Course',
         durationMonths: courseObj ? courseObj.durationMonths : 1,
-        monthlyFee: isCourseWise ? 0 : assignedMonthlyFee,
-        admissionFee: isCourseWise ? 0 : assignedAdmissionFee,
+        monthlyFee: isLumpSum ? 0 : assignedMonthlyFee,
+        admissionFee: isLumpSum ? 0 : assignedAdmissionFee,
         examFeeSem1: isDit ? (courseObj?.examFeeSem1 || 1500) : 0,
         examFeeSem2: isDit ? (courseObj?.examFeeSem2 || 1500) : 0,
         otherFee: 0,

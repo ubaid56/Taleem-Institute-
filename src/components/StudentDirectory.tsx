@@ -69,7 +69,14 @@ export const StudentDirectory: React.FC<StudentDirectoryProps> = ({
   const filteredStudents = useMemo(() => {
     return students.filter(s => {
       // Course filter
-      const matchesCourse = selectedCourseFilter === 'ALL' || s.courses.some(c => c.courseId === selectedCourseFilter);
+      const matchesCourse = selectedCourseFilter === 'ALL' 
+        ? true 
+        : selectedCourseFilter === 'CATEGORY_OTHER'
+          ? s.courses.some(sc => {
+              const c = courses.find(cr => cr.id === sc.courseId);
+              return c?.baseCourseType === 'Other' || sc.courseName.toLowerCase().includes('other');
+            })
+          : s.courses.some(c => c.courseId === selectedCourseFilter);
 
       // Status filter
       const matchesStatus = selectedStatusFilter === 'ALL' || s.status === selectedStatusFilter;
@@ -183,6 +190,7 @@ export const StudentDirectory: React.FC<StudentDirectoryProps> = ({
             className="w-full bg-[#FDFCFB] border-2 border-[#1A1A1A] px-3 py-2 text-xs text-[#1A1A1A] font-bold uppercase focus:outline-none focus:bg-white"
           >
             <option value="ALL">🎓 All Enrolled Courses ({courses.length})</option>
+            <option value="CATEGORY_OTHER">🏷️ Other Category Courses</option>
             {courses.map(c => (
               <option key={c.id} value={c.id}>{c.name} ({c.baseCourseType})</option>
             ))}

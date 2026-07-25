@@ -26,6 +26,7 @@ interface AddStudentFormProps {
   existingStudents: Student[];
   existingTxs: FeeTransaction[];
   onAddStudent: (newStudent: Student, initialTx?: FeeTransaction, shouldPrint?: boolean) => void;
+  onAddCourse?: (newCourse: Course) => void;
   onCancel?: () => void;
 }
 
@@ -34,6 +35,7 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
   existingStudents,
   existingTxs,
   onAddStudent,
+  onAddCourse,
   onCancel,
 }) => {
   // Form Fields
@@ -52,6 +54,13 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
   const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>(
     courses.length > 0 ? [courses[0].id] : []
   );
+
+  // Other Custom Course State
+  const [isOtherCourseSelected, setIsOtherCourseSelected] = useState<boolean>(false);
+  const [otherCourseTitle, setOtherCourseTitle] = useState<string>('');
+  const [otherCourseDescription, setOtherCourseDescription] = useState<string>('');
+  const [otherCourseTotalFee, setOtherCourseTotalFee] = useState<number | ''>(8000);
+  const [otherCourseDuration, setOtherCourseDuration] = useState<number | ''>(2);
 
   // Fee Particulars & Discount
   const [customMonthlyFee, setCustomMonthlyFee] = useState<number | ''>('');
@@ -114,16 +123,16 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
       const course = courses.find(c => c.id === id);
       if (!course) return;
 
-      const isCourseWise = course.baseCourseType === 'Course Wise';
-      const isThisDit = (course.baseCourseType === 'DIT' || course.name.toLowerCase().includes('dit')) && !isCourseWise;
+      const isLumpSum = course.baseCourseType === 'Course Wise' || course.baseCourseType === 'Other';
+      const isThisDit = (course.baseCourseType === 'DIT' || course.name.toLowerCase().includes('dit')) && !isLumpSum;
 
-      const effectiveMonthly = isCourseWise ? 0 : (customMonthlyFee !== '' ? Number(customMonthlyFee) : course.monthlyFee);
-      const effectiveAdmission = isCourseWise ? 0 : (customAdmissionFee !== '' ? Number(customAdmissionFee) : course.admissionFee);
+      const effectiveMonthly = isLumpSum ? 0 : (customMonthlyFee !== '' ? Number(customMonthlyFee) : course.monthlyFee);
+      const effectiveAdmission = isLumpSum ? 0 : (customAdmissionFee !== '' ? Number(customAdmissionFee) : course.admissionFee);
       const sem1 = isThisDit ? (Number(course.examFeeSem1) || Number(examFeeSem1) || 0) : 0;
       const sem2 = isThisDit ? (Number(course.examFeeSem2) || Number(examFeeSem2) || 0) : 0;
-      const other = isCourseWise ? 0 : (Number(otherFee) || 0);
+      const other = isLumpSum ? 0 : (Number(otherFee) || 0);
 
-      const courseSubtotal = isCourseWise 
+      const courseSubtotal = isLumpSum 
         ? (Number(course.totalCourseFee) || 0) 
         : ((course.durationMonths * effectiveMonthly) + effectiveAdmission + sem1 + sem2 + other);
 
@@ -146,16 +155,37 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
       });
     });
 
+    // Add custom "Other Course" if selected
+    if (isOtherCourseSelected) {
+      const otherSubtotal = Number(otherCourseTotalFee) || 0;
+      grossTotal += otherSubtotal;
+      enrollments.push({
+        courseId: 'temp-other-course-id',
+        courseName: otherCourseTitle.trim() || 'Other / Custom Course',
+        durationMonths: Number(otherCourseDuration) || 1,
+        monthlyFee: 0,
+        admissionFee: 0,
+        examFeeSem1: 0,
+        examFeeSem2: 0,
+        otherFee: 0,
+        otherFeeRemarks: otherCourseDescription.trim(),
+        discountAmount: Number(discountAmount) || 0,
+        discountRemarks,
+        totalCalculatedFee: otherSubtotal,
+        enrollmentDate: admissionDate,
+      });
+    }
+
     const discount = Math.min(grossTotal, Math.max(0, Number(discountAmount) || 0));
     const netTotal = Math.max(0, grossTotal - discount);
 
     return { grossTotal, discount, netTotal, enrollments };
-  }, [selectedCourseIds, courses, customMonthlyFee, customAdmissionFee, examFeeSem1, examFeeSem2, otherFee, otherFeeRemarks, discountAmount, discountRemarks, admissionDate]);
+  }, [selectedCourseIds, courses, customMonthlyFee, customAdmissionFee, examFeeSem1, examFeeSem2, otherFee, otherFeeRemarks, discountAmount, discountRemarks, admissionDate, isOtherCourseSelected, otherCourseTitle, otherCourseDescription, otherCourseTotalFee, otherCourseDuration]);
 
   const toggleCourseSelection = (courseId: string) => {
     setSelectedCourseIds(prev => {
       if (prev.includes(courseId)) {
-        if (prev.length === 1) return prev; // Keep at least 1 course
+        if (prev.length === 1 && !isOtherCourseSelected) return prev; // Keep at least 1 course
         return prev.filter(id => id !== courseId);
       } else {
         return [...prev, courseId];
@@ -178,9 +208,49 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
       setErrorMsg('Student Mobile Number is required.');
       return;
     }
-    if (selectedCourseIds.length === 0) {
-      setErrorMsg('Please select at least one course.');
+    if (selectedCourseIds.length === 0 && !isOtherCourseSelected) {
+      setErrorMsg('Please select at least one course or configure an Other Course.');
       return;
+    }
+
+    let finalEnrollments = [...calculatedFeeSummary.enrollments];
+
+    if (isOtherCourseSelected) {
+      if (!otherCourseTitle.trim()) {
+        setErrorMsg('Please enter a Title / Name for the Other Course.');
+        return;
+      }
+
+      const createdOtherCourse: Course = {
+        id: `course-oth-${Date.now()}`,
+        code: `OTH-${Math.floor(1000 + Math.random() * 9000)}`,
+        name: otherCourseTitle.trim(),
+        baseCourseType: 'Other',
+        durationMonths: Number(otherCourseDuration) || 1,
+        monthlyFee: 0,
+        admissionFee: 0,
+        examFeeSem1: 0,
+        examFeeSem2: 0,
+        totalCourseFee: Number(otherCourseTotalFee) || 0,
+        description: otherCourseDescription.trim() || 'Custom course assigned during admission.',
+        active: true,
+        createdAt: admissionDate,
+      };
+
+      if (onAddCourse) {
+        onAddCourse(createdOtherCourse);
+      }
+
+      finalEnrollments = finalEnrollments.map(enr => {
+        if (enr.courseId === 'temp-other-course-id') {
+          return {
+            ...enr,
+            courseId: createdOtherCourse.id,
+            courseName: createdOtherCourse.name,
+          };
+        }
+        return enr;
+      });
     }
 
     const nextStudentId = generateNextStudentId(existingStudents);
@@ -201,15 +271,15 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
       cnic: cnic.trim() || '17301-0000000-0',
       fatherCnic: fatherCnic.trim() || '17301-0000000-0',
       admissionDate,
-      courses: calculatedFeeSummary.enrollments,
+      courses: finalEnrollments,
       discountTotal: calculatedFeeSummary.discount,
       discountRemarks: discountRemarks.trim() || undefined,
       totalFeeCalculated: netTotal,
       totalFeePaid: paidNow,
       balanceRemaining: balance,
       status: 'active',
-      assignedMonthlyFee: customMonthlyFee !== '' ? Number(customMonthlyFee) : calculatedFeeSummary.enrollments[0]?.monthlyFee,
-      assignedAdmissionFee: customAdmissionFee !== '' ? Number(customAdmissionFee) : calculatedFeeSummary.enrollments[0]?.admissionFee,
+      assignedMonthlyFee: customMonthlyFee !== '' ? Number(customMonthlyFee) : finalEnrollments[0]?.monthlyFee,
+      assignedAdmissionFee: customAdmissionFee !== '' ? Number(customAdmissionFee) : finalEnrollments[0]?.admissionFee,
       assignedExamFee: isDitSelected ? Number(examFeeSem1) : undefined,
       qrCodeData: nextStudentId,
       createdAt: new Date().toISOString().slice(0, 10),
@@ -529,8 +599,15 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
                           CW
                         </span>
                       )}
+                      {course.baseCourseType === 'Other' && (
+                        <span className={`text-[9px] px-1.5 py-0.5 font-bold uppercase border shrink-0 ${
+                          isSelected ? 'bg-purple-300 text-purple-950 border-purple-300' : 'bg-purple-100 text-purple-900 border-purple-600'
+                        }`}>
+                          OTH
+                        </span>
+                      )}
                     </div>
-                    {isCourseWise ? (
+                    {isCourseWise || course.baseCourseType === 'Other' ? (
                       <p className={`text-[10px] mt-1 font-medium ${isSelected ? 'text-amber-300' : 'text-amber-900'}`}>
                         Total Course Package: <strong className="font-mono">{formatPKR(course.totalCourseFee || 0)}</strong> (No Monthly/Admission Fee)
                       </p>
@@ -548,7 +625,109 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
                 </div>
               );
             })}
+
+            {/* Custom / Other Course Option Card */}
+            <div
+              onClick={() => setIsOtherCourseSelected(prev => !prev)}
+              className={`p-3.5 border-2 cursor-pointer transition flex items-start space-x-3 ${
+                isOtherCourseSelected
+                  ? 'bg-purple-900 text-white border-purple-900'
+                  : 'bg-purple-50/80 border-purple-800 text-purple-950 hover:bg-purple-100'
+              }`}
+            >
+              <div className={`w-5 h-5 border flex items-center justify-center shrink-0 mt-0.5 ${
+                isOtherCourseSelected ? 'bg-white text-purple-900 border-white' : 'border-purple-800 bg-white'
+              }`}>
+                {isOtherCourseSelected && <CheckCircle2 className="w-3.5 h-3.5 text-purple-900" />}
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-1">
+                  <h4 className={`text-xs font-bold truncate ${isOtherCourseSelected ? 'text-white' : 'text-purple-950'}`}>
+                    ➕ Other / Custom Course
+                  </h4>
+                  <span className={`text-[9px] px-1.5 py-0.5 font-bold uppercase border shrink-0 ${
+                    isOtherCourseSelected ? 'bg-amber-400 text-amber-950 border-amber-400' : 'bg-purple-200 text-purple-950 border-purple-600'
+                  }`}>
+                    OTHER
+                  </span>
+                </div>
+                <p className={`text-[10px] mt-1 ${isOtherCourseSelected ? 'text-purple-200' : 'text-purple-900/80'}`}>
+                  Assign custom title, description & total fee at admission time
+                </p>
+              </div>
+            </div>
           </div>
+
+          {/* Expandable Configuration Panel when Other Course is Enabled */}
+          {isOtherCourseSelected && (
+            <div className="mt-3 bg-purple-50 border-2 border-purple-800 p-4 rounded-xl space-y-3">
+              <div className="flex items-center justify-between border-b border-purple-800/30 pb-2">
+                <span className="text-xs font-bold uppercase text-purple-950 tracking-wider flex items-center gap-1.5">
+                  📌 Specify Other Course Details
+                </span>
+                <span className="text-[10px] font-mono font-bold bg-purple-900 text-white px-2 py-0.5 rounded uppercase">
+                  OTHER CATEGORY
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="sm:col-span-2">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-purple-950 mb-1">
+                    Course Title / Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={otherCourseTitle}
+                    onChange={(e) => setOtherCourseTitle(e.target.value)}
+                    placeholder="e.g. AutoCAD 2D/3D Drafting"
+                    className="w-full bg-white border border-purple-800 px-3 py-1.5 text-xs text-purple-950 font-bold focus:outline-none focus:ring-1 focus:ring-purple-800"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-purple-950 mb-1">
+                    Total Course Fee (PKR) *
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={otherCourseTotalFee}
+                    onChange={(e) => setOtherCourseTotalFee(e.target.value === '' ? '' : Number(e.target.value))}
+                    placeholder="e.g. 8000"
+                    className="w-full bg-white border border-purple-800 px-3 py-1.5 text-xs text-purple-950 font-mono font-bold focus:outline-none focus:ring-1 focus:ring-purple-800"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-purple-950 mb-1">
+                    Duration (Months)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={otherCourseDuration}
+                    onChange={(e) => setOtherCourseDuration(e.target.value === '' ? '' : Number(e.target.value))}
+                    placeholder="e.g. 2"
+                    className="w-full bg-white border border-purple-800 px-3 py-1.5 text-xs text-purple-950 font-bold focus:outline-none focus:ring-1 focus:ring-purple-800"
+                  />
+                </div>
+
+                <div className="sm:col-span-4">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-purple-950 mb-1">
+                    Course Description / Remarks
+                  </label>
+                  <input
+                    type="text"
+                    value={otherCourseDescription}
+                    onChange={(e) => setOtherCourseDescription(e.target.value)}
+                    placeholder="e.g. Customized 2-month architectural drawing & rendering module"
+                    className="w-full bg-white border border-purple-800 px-3 py-1.5 text-xs text-purple-950 focus:outline-none focus:ring-1 focus:ring-purple-800"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* SECTION 3: Fee Structure, Discounts & Auto Calculations */}

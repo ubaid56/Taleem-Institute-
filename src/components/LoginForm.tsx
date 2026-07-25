@@ -27,6 +27,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({ users, settings, onLoginSu
       return;
     }
 
+    if (matchedUser.hasLoginAccess === false) {
+      setError('This staff account (Class 4 / Support) does not have portal login access enabled.');
+      return;
+    }
+
     const correctPassword = matchedUser.password || '123456';
     if (cleanPassword !== correctPassword) {
       setError('Incorrect password. Please try again.');

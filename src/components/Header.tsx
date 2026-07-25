@@ -70,6 +70,10 @@ export const Header: React.FC<HeaderProps> = ({
         return { label: 'Accountant', color: 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-500/20', icon: UserCheck };
       case 'teacher':
         return { label: 'Course Teacher', color: 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md shadow-blue-500/20', icon: BookOpenCheck };
+      case 'other_staff':
+        return { label: 'Support / Class 4', color: 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-md shadow-amber-500/20', icon: UserCheck };
+      default:
+        return { label: 'Staff Member', color: 'bg-slate-700 text-white', icon: UserCheck };
     }
   };
 

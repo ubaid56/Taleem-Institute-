@@ -279,26 +279,104 @@ export default function App() {
     showToast(`Receipt #${tx.receiptNo} deleted!`);
   };
 
+const DEFAULT_BASE_CATEGORIES = ['DIT', 'CIT', 'English Language', 'Web Development', 'Graphics Designing', 'YouTube Automation', 'Course Wise', 'Other'];
+
+const getEffectiveBaseCategories = (settings: InstituteSettings): string[] => {
+  if (settings.customBaseCategories && settings.customBaseCategories.length > 0) {
+    return settings.customBaseCategories;
+  }
+  return DEFAULT_BASE_CATEGORIES;
+};
+
   const handleAddBaseCategory = (catName: string) => {
     if (currentRole !== 'super_admin') {
       showToast('Access Denied: Only Super Admin can add base categories.');
       return;
     }
-    const currentCats = settings.customBaseCategories || [];
+    const currentCats = getEffectiveBaseCategories(settings);
     const trimmed = catName.trim();
     if (!trimmed) return;
     if (currentCats.map(c => c.toLowerCase()).includes(trimmed.toLowerCase())) {
       showToast('Base category already exists!');
       return;
     }
+    const updatedCats = [...currentCats, trimmed];
     const updatedSettings = {
       ...settings,
-      customBaseCategories: [...currentCats, trimmed],
+      customBaseCategories: updatedCats,
     };
     setSettingsState(updatedSettings);
     saveSettings(updatedSettings);
     dbSaveSettings(updatedSettings).catch(err => console.error(err));
     showToast(`Base category "${trimmed}" added successfully!`);
+  };
+
+  const handleUpdateBaseCategory = (oldName: string, newName: string) => {
+    if (currentRole !== 'super_admin') {
+      showToast('Access Denied: Only Super Admin can edit base categories.');
+      return;
+    }
+    const currentCats = getEffectiveBaseCategories(settings);
+    const trimmedNew = newName.trim();
+    if (!trimmedNew || trimmedNew === oldName) return;
+
+    const updatedCats = currentCats.map(c => c === oldName ? trimmedNew : c);
+    const updatedSettings = {
+      ...settings,
+      customBaseCategories: updatedCats,
+    };
+    setSettingsState(updatedSettings);
+    saveSettings(updatedSettings);
+    dbSaveSettings(updatedSettings).catch(err => console.error(err));
+
+    // Also update any courses using oldName
+    const updatedCoursesList = courses.map(c => {
+      if (c.baseCourseType === oldName) {
+        const updatedCourse = { ...c, baseCourseType: trimmedNew };
+        dbSaveCourse(updatedCourse);
+        return updatedCourse;
+      }
+      return c;
+    });
+    setCoursesState(updatedCoursesList);
+    saveCourses(updatedCoursesList);
+
+    showToast(`Base category updated from "${oldName}" to "${trimmedNew}"`);
+  };
+
+  const handleDeleteBaseCategory = (catName: string) => {
+    if (currentRole !== 'super_admin') {
+      showToast('Access Denied: Only Super Admin can delete base categories.');
+      return;
+    }
+    const currentCats = getEffectiveBaseCategories(settings);
+    let updatedCats = currentCats.filter(c => c !== catName);
+    if (updatedCats.length === 0) {
+      updatedCats = ['Other'];
+    }
+    const fallbackCategory = updatedCats.find(c => c === 'Other') || updatedCats[0];
+
+    const updatedSettings = {
+      ...settings,
+      customBaseCategories: updatedCats,
+    };
+    setSettingsState(updatedSettings);
+    saveSettings(updatedSettings);
+    dbSaveSettings(updatedSettings).catch(err => console.error(err));
+
+    // Reassign affected courses to fallback category
+    const updatedCoursesList = courses.map(c => {
+      if (c.baseCourseType === catName) {
+        const updatedCourse = { ...c, baseCourseType: fallbackCategory };
+        dbSaveCourse(updatedCourse);
+        return updatedCourse;
+      }
+      return c;
+    });
+    setCoursesState(updatedCoursesList);
+    saveCourses(updatedCoursesList);
+
+    showToast(`Base category "${catName}" deleted. Affected courses moved to "${fallbackCategory}".`);
   };
 
   const handleAddCourse = (newCourse: Course) => {
@@ -552,6 +630,7 @@ export default function App() {
               existingStudents={students}
               existingTxs={transactions}
               onAddStudent={handleAddStudent}
+              onAddCourse={handleAddCourse}
               onCancel={() => setActiveTab('dashboard')}
             />
           )}
@@ -572,11 +651,13 @@ export default function App() {
               courses={courses}
               students={students}
               currentRole={currentRole}
-              customBaseCategories={settings.customBaseCategories || []}
+              customBaseCategories={getEffectiveBaseCategories(settings)}
               onAddCourse={handleAddCourse}
               onUpdateCourse={handleUpdateCourse}
               onDeleteCourse={handleDeleteCourse}
               onAddBaseCategory={handleAddBaseCategory}
+              onUpdateBaseCategory={handleUpdateBaseCategory}
+              onDeleteBaseCategory={handleDeleteBaseCategory}
             />
           )}
 

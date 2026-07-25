@@ -1,4 +1,4 @@
-export type UserRole = 'super_admin' | 'accountant' | 'teacher';
+export type UserRole = 'super_admin' | 'accountant' | 'teacher' | 'other_staff';
 
 export type StudentStatus = 'active' | 'pass_out' | 'suspended';
 
@@ -118,6 +118,7 @@ export interface StaffUser {
   name: string;
   username: string;
   password?: string;
+  hasLoginAccess?: boolean;
   role: UserRole;
   email: string;
   phone: string;

@@ -114,6 +114,21 @@ export const INITIAL_COURSES: Course[] = [
     active: true,
     createdAt: '2026-03-05',
   },
+  {
+    id: 'course-other-2026',
+    code: 'OTH-2026',
+    name: 'Other / Custom Short Course',
+    baseCourseType: 'Other',
+    durationMonths: 2,
+    monthlyFee: 0,
+    admissionFee: 0,
+    examFeeSem1: 0,
+    examFeeSem2: 0,
+    totalCourseFee: 7500,
+    description: 'Custom vocational or specialized skill training program with custom total course fee.',
+    active: true,
+    createdAt: '2026-03-05',
+  },
 ];
 
 export const INITIAL_STUDENTS: Student[] = [];

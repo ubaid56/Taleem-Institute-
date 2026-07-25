@@ -29,6 +29,7 @@ export const UserAccessManager: React.FC<UserAccessManagerProps> = ({
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<UserRole>('teacher');
+  const [hasLoginAccess, setHasLoginAccess] = useState<boolean>(true);
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [designation, setDesignation] = useState('');
@@ -56,6 +57,7 @@ export const UserAccessManager: React.FC<UserAccessManagerProps> = ({
     setUsername('');
     setPassword('');
     setRole('teacher');
+    setHasLoginAccess(true);
     setEmail('');
     setPhone('');
     setDesignation('');
@@ -103,6 +105,7 @@ export const UserAccessManager: React.FC<UserAccessManagerProps> = ({
   const handleRoleChangePreset = (newRole: UserRole) => {
     setRole(newRole);
     if (newRole === 'super_admin') {
+      setHasLoginAccess(true);
       setCanAddStudent(true);
       setCanEditStudent(true);
       setCanDeleteStudent(true);
@@ -115,6 +118,7 @@ export const UserAccessManager: React.FC<UserAccessManagerProps> = ({
       setCanManageExpenses(true);
       setCanManagePayroll(true);
     } else if (newRole === 'accountant') {
+      setHasLoginAccess(true);
       setCanAddStudent(true);
       setCanEditStudent(false);
       setCanDeleteStudent(false);
@@ -127,6 +131,7 @@ export const UserAccessManager: React.FC<UserAccessManagerProps> = ({
       setCanManageExpenses(true);
       setCanManagePayroll(false);
     } else if (newRole === 'teacher') {
+      setHasLoginAccess(true);
       setCanAddStudent(false);
       setCanEditStudent(false);
       setCanDeleteStudent(false);
@@ -138,38 +143,67 @@ export const UserAccessManager: React.FC<UserAccessManagerProps> = ({
       setCanManageUsers(false);
       setCanManageExpenses(false);
       setCanManagePayroll(false);
+    } else if (newRole === 'other_staff') {
+      setHasLoginAccess(false);
+      if (!designation) {
+        setDesignation('Chokidar / Class 4');
+      }
+      setCanAddStudent(false);
+      setCanEditStudent(false);
+      setCanDeleteStudent(false);
+      setCanSubmitFee(false);
+      setCanManageCourses(false);
+      setCanViewFinancials(false);
+      setCanTakeAttendance(false);
+      setCanManageStatus(false);
+      setCanManageUsers(false);
+      setCanManageExpenses(false);
+      setCanManagePayroll(false);
     }
   };
 
   const handleSaveUser = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !username.trim()) return;
+    if (!name.trim()) return;
+
+    // Auto-generate a clean username if login access is not needed and username was left blank
+    let finalUsername = username.trim().toLowerCase();
+    if (!finalUsername) {
+      if (!hasLoginAccess || role === 'other_staff') {
+        const cleanTitle = (designation || 'staff').toLowerCase().replace(/[^a-z0-9]/g, '');
+        finalUsername = `staff_${cleanTitle}_${Math.floor(1000 + Math.random() * 9000)}`;
+      } else {
+        alert('Username is required for staff members with portal login access.');
+        return;
+      }
+    }
 
     const userObj: StaffUser = {
       id: editingUserId || `usr-${Date.now()}`,
       name: name.trim(),
-      username: username.trim().toLowerCase(),
-      password: password.trim() || '123456',
+      username: finalUsername,
+      password: password.trim() || (hasLoginAccess ? '123456' : ''),
+      hasLoginAccess,
       role,
       email: email.trim(),
       phone: phone.trim(),
-      designation: designation.trim() || undefined,
+      designation: designation.trim() || (role === 'other_staff' ? 'Support Staff / Class 4' : undefined),
       cnic: cnic.trim() || undefined,
       photoUrl: photoUrl.trim() || undefined,
       baseSalary: parseFloat(baseSalary) || 0,
       assignedCourses,
       permissions: {
-        canAddStudent,
-        canEditStudent: role === 'super_admin' ? true : canEditStudent,
-        canDeleteStudent: role === 'super_admin' ? true : canDeleteStudent,
-        canSubmitFee,
-        canManageCourses,
-        canViewFinancials,
-        canTakeAttendance,
-        canManageStatus: role === 'super_admin' ? true : canManageStatus,
-        canManageUsers: role === 'super_admin' ? true : canManageUsers,
-        canManageExpenses: role === 'super_admin' ? true : (canManageExpenses || role === 'accountant'),
-        canManagePayroll: role === 'super_admin' ? true : canManagePayroll,
+        canAddStudent: hasLoginAccess ? canAddStudent : false,
+        canEditStudent: role === 'super_admin' ? true : (hasLoginAccess ? canEditStudent : false),
+        canDeleteStudent: role === 'super_admin' ? true : (hasLoginAccess ? canDeleteStudent : false),
+        canSubmitFee: hasLoginAccess ? canSubmitFee : false,
+        canManageCourses: hasLoginAccess ? canManageCourses : false,
+        canViewFinancials: hasLoginAccess ? canViewFinancials : false,
+        canTakeAttendance: hasLoginAccess ? canTakeAttendance : false,
+        canManageStatus: role === 'super_admin' ? true : (hasLoginAccess ? canManageStatus : false),
+        canManageUsers: role === 'super_admin' ? true : (hasLoginAccess ? canManageUsers : false),
+        canManageExpenses: role === 'super_admin' ? true : (hasLoginAccess ? (canManageExpenses || role === 'accountant') : false),
+        canManagePayroll: role === 'super_admin' ? true : (hasLoginAccess ? canManagePayroll : false),
       },
     };
 
@@ -186,7 +220,8 @@ export const UserAccessManager: React.FC<UserAccessManagerProps> = ({
     setEditingUserId(usr.id);
     setName(usr.name);
     setUsername(usr.username);
-    setPassword(usr.password || '123456');
+    setPassword(usr.password || '');
+    setHasLoginAccess(usr.hasLoginAccess !== false);
     setRole(usr.role);
     setEmail(usr.email);
     setPhone(usr.phone);
@@ -305,20 +340,53 @@ export const UserAccessManager: React.FC<UserAccessManagerProps> = ({
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Prof. Asad Khan"
+                  placeholder="e.g. Asad Khan / Gul Zada"
                   className="w-full bg-[#FDFCFB] border border-[#1A1A1A] px-3.5 py-2 text-xs text-[#1A1A1A] font-bold focus:outline-none"
                 />
               </div>
 
               <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-[#1A1A1A] mb-1">Select Access Role *</label>
+                <select
+                  value={role}
+                  onChange={(e) => handleRoleChangePreset(e.target.value as any)}
+                  className="w-full bg-[#FDFCFB] border border-[#1A1A1A] px-3.5 py-2 text-xs text-[#1A1A1A] font-bold uppercase focus:outline-none"
+                >
+                  <option value="super_admin">Super Admin (Owner / Director)</option>
+                  <option value="accountant">Accountant (Fees, Admissions & Expenses)</option>
+                  <option value="teacher">Course Teacher (QR Attendance & Courses)</option>
+                  <option value="other_staff">Support Staff / Class 4 / Other (Chokidar, Peon, Sweeper, etc.)</option>
+                </select>
+              </div>
+
+              <div className="sm:col-span-2 md:col-span-1">
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-[#1A1A1A] mb-1">Designation / Title</label>
                 <input
                   type="text"
                   value={designation}
                   onChange={(e) => setDesignation(e.target.value)}
-                  placeholder="e.g. Senior IT Lecturer / Head Accountant"
+                  placeholder="e.g. Chokidar / Class 4 / Lecturer"
                   className="w-full bg-[#FDFCFB] border border-[#1A1A1A] px-3.5 py-2 text-xs text-[#1A1A1A] focus:outline-none"
                 />
+                {/* Quick Designation Preset Chips */}
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  {[
+                    '🛡️ Chokidar / Security',
+                    '🧹 Class 4 / Peon',
+                    '🚗 Driver',
+                    '🔧 Maintenance / Gardener',
+                    '💻 Lab Assistant'
+                  ].map(chip => (
+                    <button
+                      key={chip}
+                      type="button"
+                      onClick={() => setDesignation(chip.replace(/^[^\w\s]+/, '').trim())}
+                      className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-[#F4F2EE] hover:bg-[#1A1A1A] hover:text-white border border-[#1A1A1A] text-[#1A1A1A] transition rounded"
+                    >
+                      {chip}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div>
@@ -333,55 +401,12 @@ export const UserAccessManager: React.FC<UserAccessManagerProps> = ({
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-[#1A1A1A] mb-1">Username *</label>
-                <input
-                  type="text"
-                  required
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="e.g. asad_teacher"
-                  className="w-full bg-[#FDFCFB] border border-[#1A1A1A] px-3.5 py-2 text-xs text-[#1A1A1A] font-mono focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-[#1A1A1A] mb-1 flex items-center justify-between">
-                  <span>Login Password *</span>
-                  <span className="text-[9px] text-amber-800 font-bold bg-amber-100 px-1 border border-amber-300">Secret</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Set password (e.g. pass123)"
-                    className="w-full bg-[#FDFCFB] border border-[#1A1A1A] px-3.5 py-2 text-xs text-[#1A1A1A] font-mono focus:outline-none"
-                  />
-                  <Lock className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-2.5" />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-[#1A1A1A] mb-1">Select Access Role *</label>
-                <select
-                  value={role}
-                  onChange={(e) => handleRoleChangePreset(e.target.value as any)}
-                  className="w-full bg-[#FDFCFB] border border-[#1A1A1A] px-3.5 py-2 text-xs text-[#1A1A1A] font-bold uppercase focus:outline-none"
-                >
-                  <option value="super_admin">Super Admin (Owner / Director)</option>
-                  <option value="accountant">Accountant (Fees, Admissions & Expenses)</option>
-                  <option value="teacher">Course Teacher (QR Attendance & Courses)</option>
-                </select>
-              </div>
-
-              <div>
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-[#1A1A1A] mb-1">Email Address</label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="asad@tist.edu.pk"
+                  placeholder="staff@tist.edu.pk"
                   className="w-full bg-[#FDFCFB] border border-[#1A1A1A] px-3.5 py-2 text-xs text-[#1A1A1A] focus:outline-none"
                 />
               </div>
@@ -404,11 +429,79 @@ export const UserAccessManager: React.FC<UserAccessManagerProps> = ({
                   min="0"
                   value={baseSalary}
                   onChange={(e) => setBaseSalary(e.target.value)}
-                  placeholder="e.g. 55000"
+                  placeholder="e.g. 25000"
                   className="w-full bg-emerald-50 border border-emerald-800 px-3.5 py-2 text-xs font-mono font-bold text-emerald-950 focus:outline-none"
                 />
               </div>
 
+            </div>
+
+            {/* Portal Access Control & Credentials Box */}
+            <div className="p-4 bg-[#F4F2EE] border-2 border-[#1A1A1A] space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-[#1A1A1A]/30">
+                <label className="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-[#1A1A1A] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={hasLoginAccess}
+                    onChange={(e) => {
+                      const enabled = e.target.checked;
+                      setHasLoginAccess(enabled);
+                      if (!enabled) {
+                        setCanAddStudent(false);
+                        setCanSubmitFee(false);
+                        setCanTakeAttendance(false);
+                      }
+                    }}
+                    className="w-4 h-4 accent-[#1A1A1A]"
+                  />
+                  <span>Allow System Portal Login Access Credentials</span>
+                </label>
+                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 border ${
+                  hasLoginAccess ? 'bg-emerald-100 text-emerald-900 border-emerald-400' : 'bg-slate-200 text-slate-800 border-slate-400'
+                }`}>
+                  {hasLoginAccess ? '🔑 System Login Enabled' : '🔒 No System Access Required (Class 4 / Chokidar)'}
+                </span>
+              </div>
+
+              {hasLoginAccess ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-[#1A1A1A] mb-1">Username *</label>
+                    <input
+                      type="text"
+                      required={hasLoginAccess}
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder="e.g. asad_teacher"
+                      className="w-full bg-white border border-[#1A1A1A] px-3.5 py-2 text-xs text-[#1A1A1A] font-mono focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-[#1A1A1A] mb-1 flex items-center justify-between">
+                      <span>Login Password *</span>
+                      <span className="text-[9px] text-amber-800 font-bold bg-amber-100 px-1 border border-amber-300">Secret</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        required={hasLoginAccess}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Set password (e.g. pass123)"
+                        className="w-full bg-white border border-[#1A1A1A] px-3.5 py-2 text-xs text-[#1A1A1A] font-mono focus:outline-none"
+                      />
+                      <Lock className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-2.5" />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-xs text-[#1A1A1A]/80 font-mono space-y-1">
+                  <p className="font-bold text-[#1A1A1A]">ℹ️ Login access disabled for this staff member.</p>
+                  <p className="text-[11px]">They can still receive monthly base salary and advance loan payouts in the Staff Payroll module without needing a login username or password.</p>
+                  {username && <p className="text-[10px] text-slate-600">Internal Reference ID: @{username}</p>}
+                </div>
+              )}
             </div>
 
             {/* Course Assignments if Teacher */}
@@ -618,8 +711,12 @@ export const UserAccessManager: React.FC<UserAccessManagerProps> = ({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-1">
                       <h3 className="font-serif italic font-bold text-lg text-[#1A1A1A] truncate">{usr.name}</h3>
-                      <span className="px-2 py-0.5 text-[9px] font-bold uppercase border border-[#1A1A1A] bg-[#F4F2EE] text-[#1A1A1A] shrink-0">
-                        {usr.role.replace('_', ' ')}
+                      <span className={`px-2 py-0.5 text-[9px] font-bold uppercase border shrink-0 ${
+                        usr.role === 'other_staff'
+                          ? 'bg-amber-100 text-amber-900 border-amber-400'
+                          : 'bg-[#F4F2EE] text-[#1A1A1A] border-[#1A1A1A]'
+                      }`}>
+                        {usr.role === 'other_staff' ? 'Support / Class 4' : usr.role.replace('_', ' ')}
                       </span>
                     </div>
 
@@ -629,28 +726,42 @@ export const UserAccessManager: React.FC<UserAccessManagerProps> = ({
                 </div>
 
                 {/* Login Credentials Box */}
-                <div className="mt-4 p-2.5 bg-slate-100 border border-[#1A1A1A] space-y-1 text-xs font-mono">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase text-slate-600">Username:</span>
-                    <span className="font-bold text-slate-900">@{usr.username}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase text-slate-600">Password:</span>
-                    <div className="flex items-center space-x-1.5">
-                      <span className="font-bold text-[#1A1A1A] bg-white px-1.5 py-0.5 border border-slate-300">
-                        {showPasswordMap[usr.id] ? (usr.password || '123456') : '••••••••'}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => togglePasswordVisibility(usr.id)}
-                        className="text-slate-600 hover:text-slate-900 p-0.5"
-                        title={showPasswordMap[usr.id] ? "Hide Password" : "Show Password"}
-                      >
-                        {showPasswordMap[usr.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                      </button>
+                {usr.hasLoginAccess !== false ? (
+                  <div className="mt-4 p-2.5 bg-slate-100 border border-[#1A1A1A] space-y-1 text-xs font-mono">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase text-slate-600">Portal Login:</span>
+                      <span className="text-[9px] font-bold uppercase bg-emerald-100 text-emerald-900 px-1 border border-emerald-300">🔑 Enabled</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase text-slate-600">Username:</span>
+                      <span className="font-bold text-slate-900">@{usr.username}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase text-slate-600">Password:</span>
+                      <div className="flex items-center space-x-1.5">
+                        <span className="font-bold text-[#1A1A1A] bg-white px-1.5 py-0.5 border border-slate-300">
+                          {showPasswordMap[usr.id] ? (usr.password || '123456') : '••••••••'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => togglePasswordVisibility(usr.id)}
+                          className="text-slate-600 hover:text-slate-900 p-0.5"
+                          title={showPasswordMap[usr.id] ? "Hide Password" : "Show Password"}
+                        >
+                          {showPasswordMap[usr.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="mt-4 p-2.5 bg-slate-50 border border-dashed border-slate-400 space-y-1 text-xs font-mono text-slate-700">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase text-slate-500">Portal Access:</span>
+                      <span className="text-[9px] font-bold uppercase bg-slate-200 text-slate-800 px-1.5 py-0.5 border border-slate-400">🔒 Disabled (No Login Required)</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 pt-0.5">Staff Ref ID: @{usr.username}</p>
+                  </div>
+                )}
 
                 {/* Contact & Financial Info */}
                 <div className="mt-3 space-y-1 text-xs text-[#1A1A1A] font-mono">

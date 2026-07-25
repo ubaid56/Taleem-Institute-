@@ -15,7 +15,8 @@ import {
   CheckCircle2, 
   Building2,
   TrendingUp,
-  Award
+  Award,
+  Tag
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -46,6 +47,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const passOutCount = students.filter(s => s.status === 'pass_out').length;
   const suspendedCount = students.filter(s => s.status === 'suspended').length;
+
+  // Students in "Other" category
+  const otherCategoryStudents = activeStudents.filter(s =>
+    s.courses.some(sc => {
+      const c = courses.find(cr => cr.id === sc.courseId);
+      return c?.baseCourseType === 'Other' || sc.courseName.toLowerCase().includes('other');
+    })
+  );
+  const otherCategoryCount = otherCategoryStudents.length;
 
   // Today's fee collection
   const todayStr = new Date().toISOString().slice(0, 10);
@@ -131,7 +141,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </div>
 
       {/* TOP METRIC CARDS GRID */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
         
         {/* Total Active Students */}
         <div className="bg-white border-2 border-[#1A1A1A] p-4 rounded-2xl flex flex-col justify-between shadow-sm">
@@ -142,6 +152,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <div className="mt-3">
             <p className="text-3xl font-serif italic font-bold text-[#1A1A1A]">{totalActiveCount}</p>
             <p className="text-[10px] uppercase font-bold text-emerald-800 tracking-wider">Enrolled</p>
+          </div>
+        </div>
+
+        {/* Other Category Students */}
+        <div 
+          onClick={() => onNavigate('student_directory')}
+          className="bg-purple-50 border-2 border-purple-900 p-4 rounded-2xl flex flex-col justify-between cursor-pointer hover:bg-purple-100 transition shadow-sm"
+        >
+          <div className="flex items-center justify-between text-purple-950">
+            <span className="text-[10px] font-bold uppercase tracking-widest">Other Category</span>
+            <Tag className="w-4 h-4 text-purple-800" />
+          </div>
+          <div className="mt-3">
+            <p className="text-3xl font-serif italic font-bold text-purple-950">{otherCategoryCount}</p>
+            <p className="text-[10px] uppercase font-bold text-purple-800 tracking-wider">Custom / Other</p>
           </div>
         </div>
 
@@ -238,6 +263,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               s.courses.some(c => c.courseId === course.id)
             );
             const enrolledCount = enrolled.length;
+            const isLumpSum = course.baseCourseType === 'Course Wise' || course.baseCourseType === 'Other';
 
             return (
               <div
@@ -245,12 +271,24 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 className="bg-white border-2 border-[#1A1A1A] p-4 rounded-2xl flex items-center justify-between hover:bg-[#F4F2EE] transition shadow-sm"
               >
                 <div>
-                  <span className="text-[9px] font-mono font-bold px-2 py-0.5 bg-[#1A1A1A] text-white uppercase tracking-wider rounded-md">
-                    {course.code}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-[9px] font-mono font-bold px-2 py-0.5 uppercase tracking-wider rounded-md ${
+                      course.baseCourseType === 'Other' ? 'bg-purple-900 text-white' : 'bg-[#1A1A1A] text-white'
+                    }`}>
+                      {course.code}
+                    </span>
+                    {course.baseCourseType === 'Other' && (
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 bg-purple-100 text-purple-900 border border-purple-400 rounded uppercase">
+                        OTHER
+                      </span>
+                    )}
+                  </div>
                   <h4 className="font-bold text-sm text-[#1A1A1A] mt-1.5">{course.name}</h4>
                   <p className="text-[10px] uppercase tracking-wider opacity-70 mt-0.5 font-semibold">
-                    {course.durationMonths} Mo • {formatPKR(course.monthlyFee)}/mo
+                    {isLumpSum 
+                      ? `${course.durationMonths} Mo • ${formatPKR(course.totalCourseFee || 0)} Total Package`
+                      : `${course.durationMonths} Mo • ${formatPKR(course.monthlyFee)}/mo`
+                    }
                   </p>
                 </div>
 

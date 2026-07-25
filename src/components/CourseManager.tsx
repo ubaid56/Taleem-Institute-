@@ -13,6 +13,8 @@ interface CourseManagerProps {
   onUpdateCourse: (updatedCourse: Course) => void;
   onDeleteCourse: (courseId: string) => void;
   onAddBaseCategory?: (catName: string) => void;
+  onUpdateBaseCategory?: (oldName: string, newName: string) => void;
+  onDeleteBaseCategory?: (catName: string) => void;
 }
 
 export const CourseManager: React.FC<CourseManagerProps> = ({
@@ -24,16 +26,21 @@ export const CourseManager: React.FC<CourseManagerProps> = ({
   onUpdateCourse,
   onDeleteCourse,
   onAddBaseCategory,
+  onUpdateBaseCategory,
+  onDeleteBaseCategory,
 }) => {
   const [showAddForm, setShowAddForm] = useState(false);
-  const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [newCategoryInput, setNewCategoryInput] = useState('');
+  const [editingCategoryOldName, setEditingCategoryOldName] = useState<string | null>(null);
+  const [editingCategoryNewName, setEditingCategoryNewName] = useState('');
+  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
 
   const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
   const [courseToDelete, setCourseToDelete] = useState<Course | null>(null);
 
   const defaultBaseCategories = ['DIT', 'CIT', 'English Language', 'Web Development', 'Graphics Designing', 'YouTube Automation', 'Course Wise', 'Other'];
-  const allBaseCategories = Array.from(new Set([...defaultBaseCategories, ...(customBaseCategories || [])]));
+  const allBaseCategories = customBaseCategories && customBaseCategories.length > 0 ? customBaseCategories : defaultBaseCategories;
 
   // New Course Fields
   const [name, setName] = useState('');
@@ -147,12 +154,13 @@ export const CourseManager: React.FC<CourseManagerProps> = ({
             <button
               onClick={() => {
                 setNewCategoryInput('');
-                setShowAddCategoryModal(true);
+                setEditingCategoryOldName(null);
+                setShowCategoryModal(true);
               }}
               className="flex-1 sm:flex-none justify-center px-3.5 sm:px-4 py-2.5 bg-white hover:bg-[#F4F2EE] text-[#1A1A1A] font-bold text-xs uppercase tracking-widest border-2 border-[#1A1A1A] flex items-center space-x-2 transition"
             >
               <Layers className="w-4 h-4 shrink-0" />
-              <span>Add Base Category</span>
+              <span>Manage Base Categories</span>
             </button>
           )}
 
@@ -169,16 +177,21 @@ export const CourseManager: React.FC<CourseManagerProps> = ({
         </div>
       </div>
 
-      {/* Add Base Category Modal */}
-      {showAddCategoryModal && (
+      {/* Manage Base Categories Modal */}
+      {showCategoryModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white border-2 border-[#1A1A1A] p-6 max-w-md w-full shadow-xl space-y-4">
+          <div className="bg-white border-2 border-[#1A1A1A] p-6 max-w-lg w-full shadow-2xl space-y-5 max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b-2 border-[#1A1A1A]">
-              <h3 className="font-serif italic font-bold text-lg text-[#1A1A1A]">Add New Base Category</h3>
-              <button onClick={() => setShowAddCategoryModal(false)} className="text-[#1A1A1A] hover:opacity-70">
-                <X className="w-5 h-5" />
+              <div className="flex items-center space-x-2">
+                <Layers className="w-5 h-5 text-[#1A1A1A]" />
+                <h3 className="font-serif italic font-bold text-lg text-[#1A1A1A]">Base Categories Manager</h3>
+              </div>
+              <button onClick={() => setShowCategoryModal(false)} className="text-[#1A1A1A] hover:bg-[#F4F2EE] px-2 py-1 border border-[#1A1A1A]">
+                <X className="w-4 h-4" />
               </button>
             </div>
+
+            {/* Add New Category Box */}
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -186,39 +199,134 @@ export const CourseManager: React.FC<CourseManagerProps> = ({
                 if (onAddBaseCategory) {
                   onAddBaseCategory(newCategoryInput.trim());
                 }
-                setShowAddCategoryModal(false);
                 setNewCategoryInput('');
               }}
-              className="space-y-4"
+              className="bg-[#F4F2EE] border border-[#1A1A1A] p-3 rounded-lg space-y-2"
             >
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-[#1A1A1A] mb-1">Category Name *</label>
+              <label className="block text-[10px] font-bold uppercase tracking-widest text-[#1A1A1A]">
+                ➕ Add New Base Category
+              </label>
+              <div className="flex gap-2">
                 <input
                   type="text"
                   required
-                  autoFocus
                   value={newCategoryInput}
                   onChange={(e) => setNewCategoryInput(e.target.value)}
-                  placeholder="e.g. Mobile App Development, Networking"
-                  className="w-full bg-[#FDFCFB] border border-[#1A1A1A] px-3.5 py-2 text-xs font-bold text-[#1A1A1A] focus:outline-none"
+                  placeholder="e.g. Mobile App Dev, Robotics..."
+                  className="flex-1 bg-white border border-[#1A1A1A] px-3 py-1.5 text-xs font-bold text-[#1A1A1A] focus:outline-none"
                 />
-              </div>
-              <div className="flex justify-end space-x-3 pt-2 border-t border-[#1A1A1A]/20">
-                <button
-                  type="button"
-                  onClick={() => setShowAddCategoryModal(false)}
-                  className="px-4 py-2 border border-[#1A1A1A] text-xs font-bold uppercase hover:bg-[#F4F2EE] transition"
-                >
-                  Cancel
-                </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-[#1A1A1A] text-white text-xs font-bold uppercase hover:bg-[#333] transition"
+                  className="px-4 py-1.5 bg-[#1A1A1A] text-white text-xs font-bold uppercase hover:bg-[#333] transition shrink-0"
                 >
-                  Save Category
+                  Add Category
                 </button>
               </div>
             </form>
+
+            {/* List of Existing Base Categories */}
+            <div className="space-y-2">
+              <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#1A1A1A]/70">
+                Existing Base Categories ({allBaseCategories.length})
+              </h4>
+
+              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                {allBaseCategories.map(catName => {
+                  const isEditingThis = editingCategoryOldName === catName;
+                  const isDefault = defaultBaseCategories.includes(catName);
+                  const coursesCount = courses.filter(c => c.baseCourseType === catName).length;
+
+                  return (
+                    <div
+                      key={catName}
+                      className="flex items-center justify-between p-2.5 bg-white border border-[#1A1A1A] rounded gap-2"
+                    >
+                      {isEditingThis ? (
+                        <div className="flex items-center gap-2 flex-1">
+                          <input
+                            type="text"
+                            value={editingCategoryNewName}
+                            onChange={(e) => setEditingCategoryNewName(e.target.value)}
+                            className="flex-1 bg-[#FDFCFB] border border-[#1A1A1A] px-2 py-1 text-xs font-bold text-[#1A1A1A] focus:outline-none"
+                            autoFocus
+                          />
+                          <button
+                            onClick={() => {
+                              if (editingCategoryNewName.trim() && onUpdateBaseCategory) {
+                                onUpdateBaseCategory(catName, editingCategoryNewName.trim());
+                              }
+                              setEditingCategoryOldName(null);
+                            }}
+                            className="p-1 bg-emerald-700 text-white hover:bg-emerald-800"
+                            title="Save Rename"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => setEditingCategoryOldName(null)}
+                            className="p-1 bg-gray-300 text-gray-800 hover:bg-gray-400"
+                            title="Cancel"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="min-w-0">
+                            <div className="flex items-center space-x-2">
+                              <span className="text-xs font-bold text-[#1A1A1A] truncate">{catName}</span>
+                              {isDefault ? (
+                                <span className="text-[9px] bg-slate-100 text-slate-700 font-mono px-1.5 py-0.5 border border-slate-300 rounded">
+                                  Default
+                                </span>
+                              ) : (
+                                <span className="text-[9px] bg-purple-100 text-purple-900 font-bold px-1.5 py-0.5 border border-purple-300 rounded">
+                                  Custom
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-[#1A1A1A]/60 mt-0.5 font-mono">
+                              {coursesCount} course{coursesCount === 1 ? '' : 's'} assigned
+                            </p>
+                          </div>
+
+                          <div className="flex items-center space-x-1 shrink-0">
+                            <button
+                              onClick={() => {
+                                setEditingCategoryOldName(catName);
+                                setEditingCategoryNewName(catName);
+                              }}
+                              className="p-1.5 bg-[#F4F2EE] hover:bg-[#1A1A1A] hover:text-white border border-[#1A1A1A] text-[#1A1A1A] transition rounded"
+                              title="Rename / Update Category"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+
+                            <button
+                              onClick={() => setCategoryToDelete(catName)}
+                              className="p-1.5 bg-rose-50 hover:bg-rose-700 hover:text-white border border-rose-800 text-rose-800 transition rounded"
+                              title="Delete Base Category"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-[#1A1A1A]/20">
+              <button
+                type="button"
+                onClick={() => setShowCategoryModal(false)}
+                className="px-5 py-2 bg-[#1A1A1A] text-white text-xs font-bold uppercase hover:bg-[#333] transition"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
