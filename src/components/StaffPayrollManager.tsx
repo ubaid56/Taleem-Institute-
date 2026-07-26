@@ -44,6 +44,7 @@ export const StaffPayrollManager: React.FC<StaffPayrollManagerProps> = ({
   onUpdateStaffBaseSalary,
 }) => {
   const isSuperAdmin = currentRole === 'super_admin';
+  const canDisburseSalary = isSuperAdmin || currentRole === 'accountant' || !!userPermissions?.canManagePayroll;
 
   const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().substring(0, 7)); // YYYY-MM
   const [searchQuery, setSearchQuery] = useState('');
@@ -169,7 +170,7 @@ export const StaffPayrollManager: React.FC<StaffPayrollManagerProps> = ({
           </div>
         </div>
 
-        {isSuperAdmin && (
+        {canDisburseSalary && (
           <button
             onClick={() => handleOpenPayModal(undefined, 'salary')}
             className="w-full sm:w-auto px-5 py-2.5 bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs uppercase tracking-widest border border-emerald-950 flex items-center justify-center space-x-2 transition shadow-sm"
@@ -274,7 +275,7 @@ export const StaffPayrollManager: React.FC<StaffPayrollManagerProps> = ({
                   <span>View Report</span>
                 </button>
 
-                {isSuperAdmin && (
+                {canDisburseSalary && (
                   <div className="flex items-center space-x-1">
                     <button
                       onClick={() => handleOpenPayModal(staff.id, 'advance')}
@@ -353,7 +354,7 @@ export const StaffPayrollManager: React.FC<StaffPayrollManagerProps> = ({
                         ) : (
                           <div className="flex items-center justify-end space-x-1">
                             <span>{formatPKR(staff.baseSalary || 0)}</span>
-                            {isSuperAdmin && (
+                            {canDisburseSalary && (
                               <button
                                 onClick={() => {
                                   setEditingBaseSalaryStaffId(staff.id);
@@ -383,7 +384,7 @@ export const StaffPayrollManager: React.FC<StaffPayrollManagerProps> = ({
                             <span>Report</span>
                           </button>
 
-                          {isSuperAdmin && (
+                          {canDisburseSalary && (
                             <>
                               <button
                                 onClick={() => handleOpenPayModal(staff.id, 'advance')}
@@ -622,7 +623,7 @@ export const StaffPayrollManager: React.FC<StaffPayrollManagerProps> = ({
                             <th className="py-2 px-3">Method</th>
                             <th className="py-2 px-3">Notes</th>
                             <th className="py-2 px-3 text-right">Amount</th>
-                            {isSuperAdmin && <th className="py-2 px-3 text-center">Delete</th>}
+                            {canDisburseSalary && <th className="py-2 px-3 text-center">Delete</th>}
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[#1A1A1A]/10">
@@ -651,7 +652,7 @@ export const StaffPayrollManager: React.FC<StaffPayrollManagerProps> = ({
                                     <Printer className="w-3 h-3" />
                                     <span>Slip</span>
                                   </button>
-                                  {isSuperAdmin && (
+                                  {canDisburseSalary && (
                                     <button
                                       onClick={() => {
                                         if (confirm(`Delete salary transaction of ${formatPKR(rec.amount)}?`)) {

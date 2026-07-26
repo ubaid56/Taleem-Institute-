@@ -62,8 +62,48 @@ export const saveSalaryRecords = (records: StaffSalaryRecord[]) => safeSave(STOR
 export const getCurrentRole = (): UserRole => safeParse(STORAGE_KEYS.CURRENT_ROLE, 'super_admin');
 export const setCurrentRole = (role: UserRole) => safeSave(STORAGE_KEYS.CURRENT_ROLE, role);
 
-export const getIsLoggedIn = (): boolean => safeParse(STORAGE_KEYS.IS_LOGGED_IN, true);
-export const setIsLoggedInState = (val: boolean) => safeSave(STORAGE_KEYS.IS_LOGGED_IN, val);
+export const getIsLoggedIn = (): boolean => {
+  try {
+    const isSessionLoggedIn = sessionStorage.getItem('tist_is_logged_in_v1');
+    if (isSessionLoggedIn === 'true') {
+      const lastActive = sessionStorage.getItem('tist_last_active_v1');
+      if (lastActive) {
+        const diff = Date.now() - Number(lastActive);
+        // 15 minutes session timeout on inactivity or sleep
+        if (diff > 15 * 60 * 1000) {
+          sessionStorage.removeItem('tist_is_logged_in_v1');
+          return false;
+        }
+      }
+      return true;
+    }
+  } catch (e) {
+    console.error('Error checking login session:', e);
+  }
+  return false;
+};
+
+export const setIsLoggedInState = (val: boolean) => {
+  try {
+    if (val) {
+      sessionStorage.setItem('tist_is_logged_in_v1', 'true');
+      sessionStorage.setItem('tist_last_active_v1', Date.now().toString());
+    } else {
+      sessionStorage.removeItem('tist_is_logged_in_v1');
+      sessionStorage.removeItem('tist_last_active_v1');
+    }
+  } catch (e) {
+    console.error('Error setting login session:', e);
+  }
+};
+
+export const updateLastActiveTime = () => {
+  try {
+    sessionStorage.setItem('tist_last_active_v1', Date.now().toString());
+  } catch (e) {
+    // ignore
+  }
+};
 
 export const getLoggedInUser = (): StaffUser | null => safeParse(STORAGE_KEYS.LOGGED_IN_USER, null);
 export const setLoggedInUserState = (user: StaffUser | null) => safeSave(STORAGE_KEYS.LOGGED_IN_USER, user);

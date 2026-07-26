@@ -129,7 +129,7 @@ export const UserAccessManager: React.FC<UserAccessManagerProps> = ({
       setCanManageStatus(false);
       setCanManageUsers(false);
       setCanManageExpenses(true);
-      setCanManagePayroll(false);
+      setCanManagePayroll(true);
     } else if (newRole === 'teacher') {
       setHasLoginAccess(true);
       setCanAddStudent(false);
@@ -203,7 +203,7 @@ export const UserAccessManager: React.FC<UserAccessManagerProps> = ({
         canManageStatus: role === 'super_admin' ? true : (hasLoginAccess ? canManageStatus : false),
         canManageUsers: role === 'super_admin' ? true : (hasLoginAccess ? canManageUsers : false),
         canManageExpenses: role === 'super_admin' ? true : (hasLoginAccess ? (canManageExpenses || role === 'accountant') : false),
-        canManagePayroll: role === 'super_admin' ? true : (hasLoginAccess ? canManagePayroll : false),
+        canManagePayroll: role === 'super_admin' ? true : (hasLoginAccess ? (canManagePayroll || role === 'accountant') : false),
       },
     };
 

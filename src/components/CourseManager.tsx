@@ -628,6 +628,24 @@ export const CourseManager: React.FC<CourseManagerProps> = ({
         onClose={() => setCourseToDelete(null)}
       />
 
+      {/* Delete Base Category Confirmation Modal */}
+      <ConfirmDeleteModal
+        isOpen={!!categoryToDelete}
+        title="Delete Base Category"
+        message="Are you sure you want to delete this base category? Any affected courses will be re-assigned to 'Other'."
+        itemName={categoryToDelete || undefined}
+        confirmText="Delete Category"
+        onConfirm={() => {
+          if (categoryToDelete) {
+            if (onDeleteBaseCategory) {
+              onDeleteBaseCategory(categoryToDelete);
+            }
+            setCategoryToDelete(null);
+          }
+        }}
+        onClose={() => setCategoryToDelete(null)}
+      />
+
     </div>
   );
 };

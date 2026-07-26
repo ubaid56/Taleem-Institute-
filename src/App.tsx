@@ -10,7 +10,7 @@ import {
   getSalaryRecords, saveSalaryRecords,
   getCurrentRole, setCurrentRole,
   getSettings, saveSettings,
-  getIsLoggedIn, setIsLoggedInState,
+  getIsLoggedIn, setIsLoggedInState, updateLastActiveTime,
   resetToDefaultData
 } from './lib/storage';
 import {
@@ -154,6 +154,64 @@ export default function App() {
       unsubUsers();
     };
   }, []);
+
+  // Activity / Sleep / Screen-lock session expiration handler
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes timeout
+
+    const checkInactivity = () => {
+      const lastActiveStr = sessionStorage.getItem('tist_last_active_v1');
+      if (lastActiveStr) {
+        const lastActive = Number(lastActiveStr);
+        if (Date.now() - lastActive > INACTIVITY_TIMEOUT_MS) {
+          setIsLoggedInState(false);
+          setIsLoggedIn(false);
+          showToast('Session expired due to closing Chrome, sleep, or inactivity. Please log in.');
+          return true;
+        }
+      } else {
+        setIsLoggedInState(false);
+        setIsLoggedIn(false);
+        return true;
+      }
+      return false;
+    };
+
+    const handleUserActivity = () => {
+      if (!checkInactivity()) {
+        updateLastActiveTime();
+      }
+    };
+
+    const handleVisibilityOrFocusChange = () => {
+      checkInactivity();
+    };
+
+    window.addEventListener('mousemove', handleUserActivity);
+    window.addEventListener('keydown', handleUserActivity);
+    window.addEventListener('click', handleUserActivity);
+    window.addEventListener('scroll', handleUserActivity);
+    window.addEventListener('touchstart', handleUserActivity);
+    window.addEventListener('focus', handleVisibilityOrFocusChange);
+    document.addEventListener('visibilitychange', handleVisibilityOrFocusChange);
+
+    updateLastActiveTime();
+
+    const intervalId = setInterval(checkInactivity, 30000); // Check every 30s
+
+    return () => {
+      window.removeEventListener('mousemove', handleUserActivity);
+      window.removeEventListener('keydown', handleUserActivity);
+      window.removeEventListener('click', handleUserActivity);
+      window.removeEventListener('scroll', handleUserActivity);
+      window.removeEventListener('touchstart', handleUserActivity);
+      window.removeEventListener('focus', handleVisibilityOrFocusChange);
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocusChange);
+      clearInterval(intervalId);
+    };
+  }, [isLoggedIn]);
 
   const handleUpdateSettings = (updated: InstituteSettings) => {
     setSettingsState(updated);

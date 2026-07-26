@@ -177,7 +177,7 @@ export const INITIAL_USERS: StaffUser[] = [
       canManageStatus: false,
       canManageUsers: false,
       canManageExpenses: true,
-      canManagePayroll: false,
+      canManagePayroll: true,
     }
   },
   {
