@@ -6,9 +6,10 @@ import { formatPKR } from '../lib/utils';
 interface EditStudentModalProps {
   student: Student;
   courses: Course[];
-  currentRole: UserRole;
-  onSaveStudent: (updatedStudent: Student) => void;
-  onDeleteStudent: (studentId: string) => void;
+  currentRole?: UserRole;
+  onSaveStudent?: (updatedStudent: Student) => void;
+  onSave?: (updatedStudent: Student) => void;
+  onDeleteStudent?: (studentId: string) => void;
   onClose: () => void;
 }
 
@@ -22,8 +23,9 @@ const PRESET_AVATARS = [
 export const EditStudentModal: React.FC<EditStudentModalProps> = ({
   student,
   courses,
-  currentRole,
+  currentRole = 'super_admin',
   onSaveStudent,
+  onSave,
   onDeleteStudent,
   onClose,
 }) => {
@@ -37,7 +39,11 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
   const [fatherMobileNo, setFatherMobileNo] = useState<string>(student.fatherMobileNo || '');
   const [cnic, setCnic] = useState<string>(student.cnic || '');
   const [fatherCnic, setFatherCnic] = useState<string>(student.fatherCnic || '');
+  const [address, setAddress] = useState<string>(student.address || '');
   const [admissionDate, setAdmissionDate] = useState<string>(student.admissionDate || new Date().toISOString().slice(0, 10));
+  const [username, setUsername] = useState<string>(student.username || student.portalUsername || '');
+  const [password, setPassword] = useState<string>(student.password || student.portalPassword || '123456');
+  const [isOrphan, setIsOrphan] = useState<boolean>(student.isOrphan || false);
 
   // Enrolled Courses Selection (by ID)
   const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>(
@@ -81,20 +87,25 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
     }
   };
 
-  // Toggle Course Selection
-  const toggleCourseSelection = (courseId: string) => {
-    setSelectedCourseIds(prev => {
-      if (prev.includes(courseId)) {
-        if (prev.length === 1) return prev; // keep at least 1 course
-        return prev.filter(id => id !== courseId);
-      } else {
-        return [...prev, courseId];
-      }
-    });
+  // Select Single Course
+  const selectSingleCourse = (courseId: string) => {
+    setSelectedCourseIds([courseId]);
+    const selectedCourse = courses.find(c => c.id === courseId);
+    if (selectedCourse) {
+      const mFee = selectedCourse.monthlyFee || 0;
+      const aFee = selectedCourse.admissionFee || 0;
+      setAssignedMonthlyFee(mFee);
+      setAssignedAdmissionFee(aFee);
+      handleAutoRecalculateCourseFee(mFee, aFee);
+    }
   };
 
-  // Helper: Recalculate fee automatically when switching/migrating courses
-  const handleAutoRecalculateCourseFee = () => {
+  // Helper: Recalculate fee automatically when switching/migrating courses or editing assigned fees
+  const handleAutoRecalculateCourseFee = (overrideMonthly?: number, overrideAdmission?: number, overrideDiscount?: number) => {
+    const monthlyToUse = overrideMonthly !== undefined ? overrideMonthly : assignedMonthlyFee;
+    const admissionToUse = overrideAdmission !== undefined ? overrideAdmission : assignedAdmissionFee;
+    const discountToUse = overrideDiscount !== undefined ? overrideDiscount : discountTotal;
+
     let newCalculatedTotal = 0;
     selectedCourseIds.forEach(id => {
       const c = courses.find(course => course.id === id);
@@ -104,11 +115,11 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
         } else {
           const isDit = c.baseCourseType === 'DIT' || c.name.toLowerCase().includes('dit');
           const examFees = isDit ? ((c.examFeeSem1 || 1500) + (c.examFeeSem2 || 1500)) : 0;
-          newCalculatedTotal += (c.durationMonths * c.monthlyFee) + c.admissionFee + examFees;
+          newCalculatedTotal += (c.durationMonths * monthlyToUse) + admissionToUse + examFees;
         }
       }
     });
-    newCalculatedTotal = Math.max(0, newCalculatedTotal - discountTotal);
+    newCalculatedTotal = Math.max(0, newCalculatedTotal - discountToUse);
     setTotalFeeCalculated(newCalculatedTotal);
   };
 
@@ -120,25 +131,28 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
       const courseObj = courses.find(c => c.id === id);
       const existingEnrollment = student.courses.find(c => c.courseId === id);
       const isLumpSum = courseObj?.baseCourseType === 'Course Wise' || courseObj?.baseCourseType === 'Other';
+      const isDit = courseObj ? ((courseObj.baseCourseType === 'DIT' || courseObj.name.toLowerCase().includes('dit')) && !isLumpSum) : false;
+      const examFees = isDit ? ((courseObj?.examFeeSem1 || 1500) + (courseObj?.examFeeSem2 || 1500)) : 0;
+      const duration = courseObj ? courseObj.durationMonths : (existingEnrollment?.durationMonths || 1);
+
+      const courseTotal = isLumpSum 
+        ? (courseObj?.totalCourseFee || existingEnrollment?.totalCalculatedFee || 0) 
+        : (duration * assignedMonthlyFee + assignedAdmissionFee + examFees);
 
       if (existingEnrollment) {
         return {
           ...existingEnrollment,
           monthlyFee: isLumpSum ? 0 : assignedMonthlyFee,
           admissionFee: isLumpSum ? 0 : assignedAdmissionFee,
-          totalCalculatedFee: isLumpSum ? (courseObj?.totalCourseFee || existingEnrollment.totalCalculatedFee) : existingEnrollment.totalCalculatedFee,
+          totalCalculatedFee: courseTotal,
         };
       }
 
       // New enrollment added during edit
-      const isDit = courseObj ? ((courseObj.baseCourseType === 'DIT' || courseObj.name.toLowerCase().includes('dit')) && !isLumpSum) : false;
-      const examFees = isDit ? ((courseObj?.examFeeSem1 || 1500) + (courseObj?.examFeeSem2 || 1500)) : 0;
-      const courseTotal = isLumpSum ? (courseObj?.totalCourseFee || 0) : (courseObj ? (courseObj.durationMonths * assignedMonthlyFee + assignedAdmissionFee + examFees) : 0);
-
       return {
         courseId: id,
         courseName: courseObj ? courseObj.name : 'Unknown Course',
-        durationMonths: courseObj ? courseObj.durationMonths : 1,
+        durationMonths: duration,
         monthlyFee: isLumpSum ? 0 : assignedMonthlyFee,
         admissionFee: isLumpSum ? 0 : assignedAdmissionFee,
         examFeeSem1: isDit ? (courseObj?.examFeeSem1 || 1500) : 0,
@@ -163,7 +177,13 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
       fatherMobileNo,
       cnic,
       fatherCnic,
+      address: address.trim() || undefined,
       admissionDate,
+      username: username.trim() || undefined,
+      password: password.trim() || '123456',
+      portalUsername: username.trim() || undefined,
+      portalPassword: password.trim() || '123456',
+      isOrphan,
       assignedMonthlyFee,
       assignedAdmissionFee,
       courses: updatedEnrollments,
@@ -175,7 +195,11 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
       balanceRemaining: newBalance,
     };
 
-    onSaveStudent(updatedStudent);
+    if (onSaveStudent) {
+      onSaveStudent(updatedStudent);
+    } else if (onSave) {
+      onSave(updatedStudent);
+    }
     onClose();
   };
 
@@ -230,9 +254,9 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
               {/* Upload Controls */}
               <div className="flex-1 space-y-2 w-full">
                 <div className="flex flex-wrap items-center gap-2">
-                  <label className="px-3 py-1.5 bg-[#1A1A1A] text-white hover:bg-[#333] font-bold text-xs uppercase tracking-wider cursor-pointer border border-[#1A1A1A] flex items-center space-x-1.5">
-                    <Upload className="w-3.5 h-3.5" />
-                    <span>Upload New Photo</span>
+                  <label className="px-3.5 py-2 bg-[#1A1A1A] text-white hover:bg-[#333] font-bold text-xs uppercase tracking-wider cursor-pointer border border-[#1A1A1A] flex items-center space-x-1.5 shadow-xs">
+                    <Upload className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Choose Photo File from PC / Device</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -241,17 +265,7 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
                     />
                   </label>
                 </div>
-
-                <div>
-                  <label className="block text-[9px] uppercase font-bold text-[#1A1A1A]/70">Or Photo Web URL:</label>
-                  <input
-                    type="text"
-                    value={photoUrl}
-                    onChange={(e) => setPhotoUrl(e.target.value)}
-                    placeholder="https://..."
-                    className="w-full bg-white border border-[#1A1A1A] px-2.5 py-1 text-xs font-mono"
-                  />
-                </div>
+                <p className="text-[11px] text-slate-600 font-medium">Select photo directly from device file storage.</p>
 
                 {/* Preset Avatars */}
                 <div className="flex items-center space-x-2 pt-1">
@@ -380,6 +394,19 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
                 />
               </div>
 
+              <div className="col-span-1 sm:col-span-2">
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-[#1A1A1A] mb-1">
+                  Residential Address / Village / City
+                </label>
+                <input
+                  type="text"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="House #, Street, Mohallah / Tehsil, District"
+                  className="w-full bg-[#FDFCFB] border border-[#1A1A1A] px-3 py-1.5 text-xs font-bold text-[#1A1A1A]"
+                />
+              </div>
+
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-[#1A1A1A] mb-1">
                   Admission Date
@@ -388,8 +415,69 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
                   type="date"
                   value={admissionDate}
                   onChange={(e) => setAdmissionDate(e.target.value)}
-                  className="w-full bg-[#FDFCFB] border border-[#1A1A1A] px-3 py-1.5 text-xs font-mono font-bold text-[#1A1A1A]"
+                  className="w-full bg-[#FDFCFB] border border-[#1A1A1A] px-3 py-1.5 text-xs font-mono font-bold text-[#1A1A1A] cursor-pointer"
                 />
+              </div>
+
+              {/* Is Orphan Student Checkbox */}
+              <div className="flex items-center space-x-3 bg-amber-50 border border-amber-300 p-2.5 rounded-md cursor-pointer">
+                <input
+                  type="checkbox"
+                  id="editIsOrphanCheckbox"
+                  checked={isOrphan}
+                  onChange={(e) => setIsOrphan(e.target.checked)}
+                  className="w-4 h-4 text-amber-600 border-amber-400 rounded focus:ring-amber-500 cursor-pointer"
+                />
+                <label htmlFor="editIsOrphanCheckbox" className="text-xs font-bold text-amber-950 cursor-pointer select-none">
+                  Orphan Student (Yateem)
+                  <span className="block text-[10px] font-normal text-amber-800">Tracked on dashboard orphan card</span>
+                </label>
+              </div>
+            </div>
+
+            {/* STUDENT PORTAL LOGIN CREDENTIALS SECTION */}
+            <div className="bg-emerald-50 border-2 border-emerald-600 p-4 space-y-3 mt-3">
+              <div className="flex items-center justify-between border-b border-emerald-300 pb-2">
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-950">
+                    🔑 Student LMS Portal Account Credentials
+                  </span>
+                </div>
+                <span className="text-[10px] bg-emerald-700 text-white font-bold px-2.5 py-0.5 uppercase tracking-wider">
+                  Edit Student Login
+                </span>
+              </div>
+              <p className="text-xs text-emerald-900 font-medium">
+                View and edit the login username and password for this student to access their Student Portal.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-emerald-950 mb-1">
+                    Portal Username (Roll / Phone / Custom)
+                  </label>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder={student.studentId || 'e.g. TIST-2026-001'}
+                    className="w-full bg-white border border-emerald-400 px-3 py-1.5 text-xs text-slate-900 font-bold focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+                  />
+                  <span className="text-[10px] text-emerald-800 mt-0.5 block">Student can also log in with Roll No ({student.studentId}) or Phone ({student.mobileNo}).</span>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-emerald-950 mb-1">
+                    Portal Password *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Default: 123456"
+                    className="w-full bg-white border border-emerald-400 px-3 py-1.5 text-xs text-slate-900 font-mono font-bold focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+                  />
+                  <span className="text-[10px] text-emerald-800 mt-0.5 block">Staff can change or reset the student's password anytime.</span>
+                </div>
               </div>
             </div>
           </div>
@@ -400,16 +488,16 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
               <div>
                 <h4 className="text-xs font-bold uppercase tracking-widest text-[#1A1A1A] flex items-center space-x-2">
                   <BookOpen className="w-4 h-4" />
-                  <span>Enrolled Courses & Course Transfer / Switch</span>
+                  <span>Enrolled Course & Course Transfer / Switch</span>
                 </h4>
-                <p className="text-[10px] text-[#1A1A1A]/70">Select or switch courses for this student</p>
+                <p className="text-[10px] text-[#1A1A1A]/70">Select single course for this student</p>
               </div>
 
               <button
                 type="button"
-                onClick={handleAutoRecalculateCourseFee}
+                onClick={() => handleAutoRecalculateCourseFee()}
                 className="px-2.5 py-1 bg-white border border-[#1A1A1A] hover:bg-slate-100 font-bold text-[10px] uppercase tracking-wider flex items-center space-x-1"
-                title="Recalculate expected total fee based on selected courses"
+                title="Recalculate expected total fee based on selected course"
               >
                 <RefreshCw className="w-3 h-3 text-[#1A1A1A]" />
                 <span>Auto Recalculate Course Fee</span>
@@ -428,9 +516,10 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
                     }`}
                   >
                     <input
-                      type="checkbox"
+                      type="radio"
+                      name="singleCourseSelect"
                       checked={isSelected}
-                      onChange={() => toggleCourseSelection(c.id)}
+                      onChange={() => selectSingleCourse(c.id)}
                       className="w-4 h-4 mt-0.5 accent-[#1A1A1A]"
                     />
                     <div className="flex-1 text-xs">
@@ -510,7 +599,12 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
                   type="number"
                   min="0"
                   value={assignedMonthlyFee}
-                  onChange={(e) => setAssignedMonthlyFee(Number(e.target.value))}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setAssignedMonthlyFee(val);
+                    handleAutoRecalculateCourseFee(val, assignedAdmissionFee, discountTotal);
+                  }}
+                  onWheel={(e) => e.currentTarget.blur()}
                   className="w-full bg-white border border-emerald-800 px-2.5 py-1.5 text-xs text-emerald-950 font-mono font-extrabold focus:outline-none"
                 />
                 <p className="text-[9px] text-emerald-800 mt-1">Default monthly fee used for all future fee submissions for this student (e.g. 1200)</p>
@@ -524,7 +618,12 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
                   type="number"
                   min="0"
                   value={assignedAdmissionFee}
-                  onChange={(e) => setAssignedAdmissionFee(Number(e.target.value))}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setAssignedAdmissionFee(val);
+                    handleAutoRecalculateCourseFee(assignedMonthlyFee, val, discountTotal);
+                  }}
+                  onWheel={(e) => e.currentTarget.blur()}
                   className="w-full bg-[#FDFCFB] border border-[#1A1A1A] px-2.5 py-1.5 text-xs font-mono font-bold text-[#1A1A1A]"
                 />
                 <p className="text-[9px] text-[#1A1A1A]/70 mt-1">Custom admission fee for this student</p>
@@ -540,6 +639,7 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
                   type="number"
                   value={totalFeeCalculated}
                   onChange={(e) => setTotalFeeCalculated(Number(e.target.value))}
+                  onWheel={(e) => e.currentTarget.blur()}
                   className="w-full bg-white border border-[#1A1A1A] px-2.5 py-1.5 text-xs font-mono font-bold"
                 />
               </div>
@@ -552,6 +652,7 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
                   type="number"
                   value={totalFeePaid}
                   onChange={(e) => setTotalFeePaid(Number(e.target.value))}
+                  onWheel={(e) => e.currentTarget.blur()}
                   className="w-full bg-white border border-[#1A1A1A] px-2.5 py-1.5 text-xs font-mono font-bold text-emerald-800"
                 />
               </div>
@@ -563,7 +664,12 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
                 <input
                   type="number"
                   value={discountTotal}
-                  onChange={(e) => setDiscountTotal(Number(e.target.value))}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setDiscountTotal(val);
+                    handleAutoRecalculateCourseFee(assignedMonthlyFee, assignedAdmissionFee, val);
+                  }}
+                  onWheel={(e) => e.currentTarget.blur()}
                   className="w-full bg-white border border-[#1A1A1A] px-2.5 py-1.5 text-xs font-mono font-bold"
                 />
               </div>

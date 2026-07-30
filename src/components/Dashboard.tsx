@@ -52,7 +52,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const otherCategoryStudents = activeStudents.filter(s =>
     s.courses.some(sc => {
       const c = courses.find(cr => cr.id === sc.courseId);
-      return c?.baseCourseType === 'Other' || sc.courseName.toLowerCase().includes('other');
+      return c?.baseCourseType === 'Other' || (sc.courseName ? sc.courseName.toLowerCase().includes('other') : false);
     })
   );
   const otherCategoryCount = otherCategoryStudents.length;

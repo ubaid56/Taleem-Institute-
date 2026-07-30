@@ -32,6 +32,8 @@ interface HeaderProps {
   onLogout?: () => void;
   onToggleMobileMenu?: () => void;
   isMobileMenuOpen?: boolean;
+  pendingApplicationsCount?: number;
+  onNavigateToOnlineApplies?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -43,6 +45,8 @@ export const Header: React.FC<HeaderProps> = ({
   onLogout,
   onToggleMobileMenu,
   isMobileMenuOpen,
+  pendingApplicationsCount = 0,
+  onNavigateToOnlineApplies,
 }) => {
   const [time, setTime] = useState(new Date().toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
@@ -116,7 +120,7 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="bg-slate-900 border-b border-slate-800 text-white sticky top-0 z-30 shadow-md print:hidden">
+    <header className="bg-slate-900 border-b border-slate-800 text-white sticky top-0 z-30 shadow-md print:hidden shrink-0">
       <div className="max-w-full px-3 sm:px-8 h-18 flex items-center justify-between gap-2 sm:gap-4 overflow-hidden">
         
         {/* Institute Title & Branding */}
@@ -124,8 +128,8 @@ export const Header: React.FC<HeaderProps> = ({
           {onToggleMobileMenu && (
             <button
               onClick={onToggleMobileMenu}
-              title="Toggle Navigation Menu"
-              className="md:hidden p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition shrink-0"
+              title="Toggle Navigation Sidebar"
+              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition shrink-0 cursor-pointer shadow-xs"
             >
               <Menu className="w-5 h-5 text-indigo-400" />
             </button>
@@ -149,6 +153,17 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="hidden sm:inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 shrink-0">
                   {settings.subTitle}
                 </span>
+              )}
+              {pendingApplicationsCount > 0 && (
+                <button
+                  type="button"
+                  onClick={onNavigateToOnlineApplies}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-600 hover:bg-rose-500 text-white font-bold text-[11px] shadow-md border border-rose-400 animate-bounce transition-all shrink-0 cursor-pointer"
+                  title="New online admission application pending"
+                >
+                  <span className="w-2 h-2 rounded-full bg-white animate-ping"></span>
+                  <span>{pendingApplicationsCount} New Applies</span>
+                </button>
               )}
             </div>
             <p className="text-[10px] sm:text-xs text-slate-400 flex items-center gap-1.5 sm:gap-2 mt-0.5 font-medium truncate">
@@ -267,6 +282,32 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
       </div>
+
+      {/* Marquee Announcement Bar */}
+      {settings.marqueeText && (
+        <div className="bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 font-semibold text-xs py-1.5 px-4 overflow-hidden border-t border-amber-600 shadow-inner flex items-center gap-3 relative z-10">
+          <span className="bg-slate-950 text-amber-300 font-extrabold text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0 flex items-center gap-1 shadow-xs z-10">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
+            Notice:
+          </span>
+          <div className="overflow-hidden w-full relative flex items-center">
+            <div className="animate-marquee-seamless flex whitespace-nowrap shrink-0 items-center font-bold tracking-wide">
+              <div className="flex items-center gap-8 px-4 shrink-0">
+                <span>{settings.marqueeText}</span>
+                <span className="text-slate-950/40 font-black">✦</span>
+                <span>{settings.marqueeText}</span>
+                <span className="text-slate-950/40 font-black">✦</span>
+              </div>
+              <div className="flex items-center gap-8 px-4 shrink-0">
+                <span>{settings.marqueeText}</span>
+                <span className="text-slate-950/40 font-black">✦</span>
+                <span>{settings.marqueeText}</span>
+                <span className="text-slate-950/40 font-black">✦</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* LOGIN / AUTH VERIFICATION MODAL */}
       {targetRole && (

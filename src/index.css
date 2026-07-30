@@ -25,6 +25,47 @@
   font-family: 'JetBrains Mono', monospace;
 }
 
+/* Smooth Infinite Seamless Marquee Announcement Bar */
+@keyframes marquee-seamless {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee-seamless {
+  display: flex;
+  width: max-content;
+  animation: marquee-seamless 25s linear infinite;
+  will-change: transform;
+}
+
+.animate-marquee-seamless:hover {
+  animation-play-state: paused;
+}
+
+/* Custom Smooth Sidebar & Container Scrollbars */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(51, 65, 85, 0.8);
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.9);
+}
+
 /* Print specific styles for 80mm thermal printers */
 @media print {
   @page {

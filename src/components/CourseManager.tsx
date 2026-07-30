@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Course, Student } from '../types';
-import { formatPKR } from '../lib/utils';
-import { BookOpen, Plus, Edit2, Trash2, Check, X, Users, Layers } from 'lucide-react';
+import { formatPKR, exportCourseStudentsPDF, exportCourseStudentsExcel } from '../lib/utils';
+import { BookOpen, Plus, Edit2, Trash2, Check, X, Users, Layers, FileSpreadsheet, FileText, Download } from 'lucide-react';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 
 interface CourseManagerProps {
@@ -588,23 +588,67 @@ export const CourseManager: React.FC<CourseManagerProps> = ({
                 </div>
               </div>
 
-              {/* Actions */}
-              <div className="flex items-center justify-end space-x-2 pt-2 border-t border-[#1A1A1A]/20">
-                <button
-                  onClick={() => startEdit(course)}
-                  className="px-3 py-1.5 bg-[#F4F2EE] hover:bg-white text-[#1A1A1A] border border-[#1A1A1A] text-xs font-bold uppercase tracking-wider flex items-center space-x-1"
-                >
-                  <Edit2 className="w-3 h-3" />
-                  <span>Edit</span>
-                </button>
+              {/* Actions & Student Exports */}
+              <div className="pt-2 border-t border-[#1A1A1A]/20 space-y-2">
+                <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-[#1A1A1A]">
+                  <span className="flex items-center space-x-1">
+                    <Download className="w-3 h-3 text-[#1A1A1A]" />
+                    <span>Export Students ({count}):</span>
+                  </span>
+                  <div className="flex items-center space-x-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const enrolled = students.filter(s => Array.isArray(s.courses) && s.courses.some(c => c.courseId === course.id));
+                        if (enrolled.length === 0) {
+                          alert(`No students enrolled in "${course.name}" yet.`);
+                          return;
+                        }
+                        exportCourseStudentsExcel(course.name, enrolled);
+                      }}
+                      className="px-2.5 py-1.5 bg-emerald-800 text-white font-bold text-[10px] uppercase tracking-wider hover:bg-emerald-900 transition flex items-center space-x-1 border border-emerald-950 min-h-[32px] cursor-pointer"
+                      title="Export Excel Sheet of Students in this Course"
+                    >
+                      <FileSpreadsheet className="w-3.5 h-3.5 shrink-0" />
+                      <span>Excel</span>
+                    </button>
 
-                <button
-                  onClick={() => setCourseToDelete(course)}
-                  className="px-2.5 py-1.5 bg-rose-50 text-rose-900 border border-rose-800 text-xs font-bold uppercase tracking-wider hover:bg-rose-100 transition rounded"
-                  title="Delete Course"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const enrolled = students.filter(s => Array.isArray(s.courses) && s.courses.some(c => c.courseId === course.id));
+                        if (enrolled.length === 0) {
+                          alert(`No students enrolled in "${course.name}" yet.`);
+                          return;
+                        }
+                        exportCourseStudentsPDF(course.name, enrolled);
+                      }}
+                      className="px-2.5 py-1.5 bg-[#1A1A1A] text-white font-bold text-[10px] uppercase tracking-wider hover:bg-[#333] transition flex items-center space-x-1 border border-[#1A1A1A] min-h-[32px] cursor-pointer"
+                      title="Export PDF List of Students in this Course"
+                    >
+                      <FileText className="w-3.5 h-3.5 shrink-0" />
+                      <span>PDF</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end space-x-2 pt-2 border-t border-dashed border-slate-300">
+                  <button
+                    onClick={() => startEdit(course)}
+                    className="px-3 py-1.5 bg-[#F4F2EE] hover:bg-white text-[#1A1A1A] border border-[#1A1A1A] text-xs font-bold uppercase tracking-wider flex items-center space-x-1"
+                  >
+                    <Edit2 className="w-3 h-3" />
+                    <span>Edit</span>
+                  </button>
+
+                  <button
+                    onClick={() => setCourseToDelete(course)}
+                    className="px-2.5 py-1.5 bg-rose-50 text-rose-900 border border-rose-800 text-xs font-bold uppercase tracking-wider hover:bg-rose-100 transition rounded"
+                    title="Delete Course"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
 
             </div>

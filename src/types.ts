@@ -39,6 +39,8 @@ export interface StudentCourseEnrollment {
 export interface Student {
   id: string;
   studentId: string; // e.g. TIST-2026-001
+  rollNumber?: string;
+  registrationNumber?: string;
   photoUrl: string;
   name: string;
   fatherName: string;
@@ -48,6 +50,12 @@ export interface Student {
   fatherMobileNo: string;
   cnic: string;
   fatherCnic: string;
+  address?: string;
+  username?: string;
+  password?: string;
+  portalUsername?: string;
+  portalPassword?: string;
+  isOrphan?: boolean;
   admissionDate: string;
   courses: StudentCourseEnrollment[];
   discountTotal?: number;
@@ -188,6 +196,7 @@ export interface InstituteSettings {
   address: string;
   phone: string;
   whatsappPhone?: string;
+  whatsappDefaultMessage?: string;
   email: string;
   ownerName: string;
   logoUrl: string;
@@ -195,5 +204,111 @@ export interface InstituteSettings {
   receiptFooterNote: string;
   registrationNo?: string;
   customBaseCategories?: string[];
+  
+  // Public Website CMS Fields
+  marqueeText?: string;
+  heroTitle?: string;
+  heroSubtitle?: string;
+  missionStatement?: string;
+  visionStatement?: string;
+  directorName?: string;
+  directorTitle?: string;
+  directorPicUrl?: string;
+  directorMessage?: string;
+  socialTiktok?: string;
+  socialFacebook?: string;
+  socialInstagram?: string;
+  socialYoutube?: string;
+}
+
+export interface PublicStaffMember {
+  id: string;
+  name: string;
+  designation: string;
+  description: string;
+  photoUrl: string;
+  order?: number;
+}
+
+export interface PublicEvent {
+  id: string;
+  title: string;
+  date: string;
+  description: string;
+  imageUrl: string;
+  location?: string;
+}
+
+export interface OnlineApplication {
+  id: string;
+  applicantName: string;
+  fatherName: string;
+  gender: 'Male' | 'Female' | 'Other';
+  mobileNo: string;
+  cnic?: string;
+  email?: string;
+  address: string;
+  courseId: string;
+  courseName: string;
+  status: 'pending' | 'accepted' | 'approved' | 'rejected';
+  submittedAt: string;
+  notes?: string;
+  photoUrl?: string;
+  dob?: string;
+  qualification?: string;
+  enrolledStudentId?: string;
+}
+
+export type AttachmentType = 'text' | 'image' | 'pdf' | 'doc' | 'excel' | 'word' | 'link';
+
+export interface Assignment {
+  id: string;
+  title: string;
+  description: string;
+  courseId: string;
+  courseName: string;
+  assignedBy?: string;
+  assignedByRole?: string;
+  createdByUserId?: string;
+  createdByName?: string;
+  dueDate?: string; // YYYY-MM-DD
+  fileType?: 'text' | 'image' | 'pdf' | 'excel' | 'word';
+  attachmentType?: AttachmentType;
+  attachmentUrl?: string; // File URL or Web link
+  attachmentName?: string;
+  totalMarks?: number;
+  createdAt: string;
+}
+
+export interface AssignmentSubmission {
+  id: string;
+  assignmentId: string;
+  studentId: string;
+  studentName: string;
+  rollNumber?: string;
+  courseId: string;
+  submissionText?: string;
+  attachmentType?: AttachmentType;
+  attachmentUrl?: string;
+  attachmentName?: string;
+  submittedAt: string;
+  marksObtained?: number;
+  feedback?: string;
+  teacherFeedback?: string;
+  gradedBy?: string;
+  gradedByUserId?: string;
+  gradedAt?: string;
+  status?: 'submitted' | 'graded';
+}
+
+export interface InstituteNotice {
+  id: string;
+  title: string;
+  subtitle?: string;
+  category: 'General Notice' | 'Exam Notice' | 'Admission Notice' | 'Holiday Notice';
+  description: string;
+  imageUrl?: string;
+  createdAt: string;
+  postedBy?: string;
 }
 

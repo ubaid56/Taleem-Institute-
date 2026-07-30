@@ -19,7 +19,9 @@ import {
   TrendingDown,
   DollarSign,
   PieChart,
-  Database
+  Database,
+  Globe,
+  FileCheck
 } from 'lucide-react';
 
 export type TabType = 
@@ -39,6 +41,8 @@ export type TabType =
   | 'suspended' 
   | 'access_control'
   | 'general_settings'
+  | 'assignments_manager'
+  | 'website_cms'
   | 'backup';
 
 interface SidebarProps {
@@ -47,8 +51,10 @@ interface SidebarProps {
   currentRole: UserRole;
   userPermissions?: StaffUser['permissions'];
   activeStudentsCount: number;
+  defaultersCount?: number;
   passOutCount: number;
   suspendedCount: number;
+  pendingApplicationsCount?: number;
   isMobileMenuOpen?: boolean;
   onCloseMobileMenu?: () => void;
 }
@@ -59,8 +65,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentRole,
   userPermissions,
   activeStudentsCount,
+  defaultersCount = 0,
   passOutCount,
   suspendedCount,
+  pendingApplicationsCount = 0,
   isMobileMenuOpen = false,
   onCloseMobileMenu,
 }) => {
@@ -128,6 +136,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: 'defaulter_list',
       label: 'Fee Defaulter List',
       icon: AlertTriangle,
+      badge: defaultersCount,
+      badgeColor: 'bg-rose-700 text-white border-rose-900',
       roles: ['super_admin', 'accountant'],
       accentColor: 'text-rose-500',
     },
@@ -185,6 +195,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
       accentColor: 'text-indigo-600',
     },
     {
+      id: 'assignments_manager',
+      label: 'LMS Course Homework',
+      icon: FileCheck,
+      roles: ['super_admin', 'accountant', 'teacher'],
+      accentColor: 'text-emerald-500',
+    },
+    {
+      id: 'website_cms',
+      label: 'Website CMS & Online Applies',
+      icon: Globe,
+      badge: pendingApplicationsCount > 0 ? pendingApplicationsCount : undefined,
+      badgeColor: 'bg-rose-600 text-white border-rose-700 animate-pulse font-extrabold',
+      roles: ['super_admin'],
+      accentColor: 'text-teal-500',
+    },
+    {
       id: 'general_settings',
       label: 'Institute Settings',
       icon: Settings,
@@ -238,23 +264,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const handleItemClick = (id: TabType) => {
     onSelectTab(id);
-    if (onCloseMobileMenu) {
+    if (typeof window !== 'undefined' && window.innerWidth < 768 && onCloseMobileMenu) {
       onCloseMobileMenu();
     }
   };
 
   const sidebarContent = (
-    <div className="w-64 bg-slate-900 border-r border-slate-800 shrink-0 min-h-full h-full p-4 flex flex-col justify-between text-slate-100 shadow-xl overflow-y-auto overscroll-contain scroll-smooth touch-pan-y [webkit-overflow-scrolling:touch]">
+    <div className="w-64 bg-slate-900 border-r border-slate-800 shrink-0 h-full max-h-full p-4 flex flex-col justify-between text-slate-100 shadow-xl overflow-y-auto overscroll-contain scroll-smooth touch-pan-y custom-scrollbar [webkit-overflow-scrolling:touch]">
+      {/* Group 1: MAIN MANAGEMENT */}
       <div className="space-y-4">
         
         <div className="px-2 pt-1 flex items-center justify-between">
           <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            Navigation Modules
+            📊 MAIN MODULES
           </h3>
           {onCloseMobileMenu && (
             <button
               onClick={onCloseMobileMenu}
-              className="md:hidden p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              title="Hide Sidebar"
+              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -262,7 +290,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         <div className="space-y-1">
-          {visibleItems.map(item => {
+          {visibleItems.slice(0, 3).map(item => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
 
@@ -270,7 +298,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 key={item.id}
                 onClick={() => handleItemClick(item.id)}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 ${
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 cursor-pointer ${
                   isActive
                     ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-600/30 font-extrabold scale-[1.01]'
                     : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
@@ -296,6 +324,90 @@ export const Sidebar: React.FC<SidebarProps> = ({
             );
           })}
         </div>
+
+        {/* Group 2: FINANCIAL & ACADEMIC SUB-MODULES */}
+        <div className="pt-2">
+          <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 mb-2">
+            💼 FINANCIAL & ACADEMIC
+          </h3>
+          <div className="space-y-1">
+            {visibleItems.slice(3, 14).map(item => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => handleItemClick(item.id)}
+                  className={`w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-150 cursor-pointer ${
+                    isActive
+                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-600/30 font-extrabold scale-[1.01]'
+                      : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3 truncate">
+                    <div className={`p-1.5 rounded-lg ${isActive ? 'bg-white/20 text-white' : 'bg-slate-800/80 ' + (item.accentColor || 'text-indigo-400')}`}>
+                      <Icon className="w-4 h-4 shrink-0" />
+                    </div>
+                    <span className="truncate text-xs font-semibold">{item.label}</span>
+                  </div>
+
+                  {item.badge !== undefined && item.badge > 0 ? (
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full border font-mono font-bold ${
+                      isActive ? 'bg-white text-indigo-900 border-white' : item.badgeColor || 'bg-slate-800 text-slate-300 border-slate-700'
+                    }`}>
+                      {item.badge}
+                    </span>
+                  ) : isActive ? (
+                    <ChevronRight className="w-4 h-4 text-white/80" />
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Group 3: WEBSITE & SYSTEM */}
+        <div className="pt-2">
+          <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 mb-2">
+            🌐 SYSTEM & CMS
+          </h3>
+          <div className="space-y-1">
+            {visibleItems.slice(14).map(item => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => handleItemClick(item.id)}
+                  className={`w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-150 cursor-pointer ${
+                    isActive
+                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-600/30 font-extrabold scale-[1.01]'
+                      : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3 truncate">
+                    <div className={`p-1.5 rounded-lg ${isActive ? 'bg-white/20 text-white' : 'bg-slate-800/80 ' + (item.accentColor || 'text-indigo-400')}`}>
+                      <Icon className="w-4 h-4 shrink-0" />
+                    </div>
+                    <span className="truncate text-xs font-semibold">{item.label}</span>
+                  </div>
+
+                  {item.badge !== undefined && item.badge > 0 ? (
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full border font-mono font-bold ${
+                      isActive ? 'bg-white text-indigo-900 border-white' : item.badgeColor || 'bg-slate-800 text-slate-300 border-slate-700'
+                    }`}>
+                      {item.badge}
+                    </span>
+                  ) : isActive ? (
+                    <ChevronRight className="w-4 h-4 text-white/80" />
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       {/* Footer Status Widget */}
@@ -317,10 +429,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
-      {/* Desktop Sidebar (visible md+) */}
-      <aside className="hidden md:flex min-h-[calc(100vh-4.5rem)] max-h-[calc(100vh-4.5rem)] overflow-y-auto overscroll-contain scroll-smooth print:hidden">
-        {sidebarContent}
-      </aside>
+      {/* Desktop & Laptop Sidebar (visible md+ when isMobileMenuOpen is true) */}
+      {isMobileMenuOpen && (
+        <aside className="hidden md:flex flex-col self-stretch h-full max-h-full shrink-0 bg-slate-900 border-r border-slate-800 print:hidden overflow-hidden transition-all duration-300">
+          {sidebarContent}
+        </aside>
+      )}
 
       {/* Mobile Slide-Over Drawer Overlay */}
       {isMobileMenuOpen && (
@@ -331,7 +445,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity"
           />
           {/* Drawer Content */}
-          <div className="relative z-10 flex-1 max-w-xs w-full max-h-screen h-full overflow-y-auto overscroll-contain scroll-smooth touch-pan-y [webkit-overflow-scrolling:touch]">
+          <div className="relative z-10 flex-1 max-w-xs w-full max-h-screen h-full overflow-y-auto overscroll-contain scroll-smooth touch-pan-y custom-scrollbar [webkit-overflow-scrolling:touch]">
             {sidebarContent}
           </div>
         </div>

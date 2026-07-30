@@ -464,7 +464,7 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
                 <p>Receipt #: <span className="font-bold">RCP-2026-9081</span></p>
                 <p>Student: <span className="font-bold">Muhammad Ali</span></p>
                 <p>Course: <span className="font-bold">DIT Batch 2026</span></p>
-                <p>Amount Paid: <span className="font-bold">{formData.currencySymbol || 'Rs.'} 5,000</span></p>
+                <p>Amount Paid: <span className="font-bold">{formData.currencySymbol || 'PKR'} 5,000</span></p>
               </div>
 
               <p className="text-[8px] text-slate-600 pt-1">

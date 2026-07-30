@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Student, StudentStatus, Course, UserRole, InstituteSettings } from '../types';
-import { GraduationCap, UserX, CheckSquare, Square, RefreshCw, Edit3, Trash2, QrCode, Barcode } from 'lucide-react';
+import { GraduationCap, UserX, CheckSquare, Square, RefreshCw, Edit3, Trash2, QrCode, Barcode, Search, AlertCircle } from 'lucide-react';
+import { formatPKR } from '../lib/utils';
 import { EditStudentModal } from './EditStudentModal';
 import { StudentCardModal } from './StudentCardModal';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
@@ -50,6 +51,11 @@ export const PassOutSuspendedView: React.FC<PassOutSuspendedViewProps> = ({
   const [moduleSelectedIds, setModuleSelectedIds] = useState<string[]>([]);
   const [batchReactivateConfirm, setBatchReactivateConfirm] = useState<boolean>(false);
 
+  // Search & Filter state for Pass Out / Suspended Students list
+  const [moduleSearch, setModuleSearch] = useState<string>('');
+  const [moduleCourseFilter, setModuleCourseFilter] = useState<string>('ALL');
+  const [moduleFeeFilter, setModuleFeeFilter] = useState<'ALL' | 'DUE' | 'PAID'>('ALL');
+
   const isSuperAdmin = currentRole === 'super_admin';
   const hasEditPermission = isSuperAdmin || !!userPermissions?.canEditStudent;
   const hasDeletePermission = isSuperAdmin || !!userPermissions?.canDeleteStudent;
@@ -69,10 +75,48 @@ export const PassOutSuspendedView: React.FC<PassOutSuspendedViewProps> = ({
     });
   }, [students, selectedCourseFilter, searchQuery]);
 
-  // Students in current view module (Pass Out or Suspended)
-  const moduleStudents = useMemo(() => {
+  // All raw students in current view module (Pass Out or Suspended)
+  const rawModuleStudents = useMemo(() => {
     return students.filter(s => s.status === activeModule);
   }, [students, activeModule]);
+
+  // Filtered module students based on search query, course filter, and fee dues filter
+  const moduleStudents = useMemo(() => {
+    return rawModuleStudents.filter(s => {
+      const matchesCourse = moduleCourseFilter === 'ALL' || s.courses.some(c => c.courseId === moduleCourseFilter);
+
+      const q = moduleSearch.trim().toLowerCase();
+      const matchesSearch = !q ||
+        s.name.toLowerCase().includes(q) ||
+        s.studentId.toLowerCase().includes(q) ||
+        s.fatherName.toLowerCase().includes(q) ||
+        (s.mobileNo && s.mobileNo.includes(q)) ||
+        (s.cnic && s.cnic.includes(q));
+
+      const remBalance = s.balanceRemaining ?? Math.max(0, (s.totalFeeCalculated || 0) - (s.totalFeePaid || 0));
+      const matchesFee =
+        moduleFeeFilter === 'ALL' ||
+        (moduleFeeFilter === 'DUE' && remBalance > 0) ||
+        (moduleFeeFilter === 'PAID' && remBalance === 0);
+
+      return matchesCourse && matchesSearch && matchesFee;
+    });
+  }, [rawModuleStudents, moduleCourseFilter, moduleSearch, moduleFeeFilter]);
+
+  // Total pending dues calculation for the module
+  const totalModuleDues = useMemo(() => {
+    return rawModuleStudents.reduce((acc, s) => {
+      const rem = s.balanceRemaining ?? Math.max(0, (s.totalFeeCalculated || 0) - (s.totalFeePaid || 0));
+      return acc + rem;
+    }, 0);
+  }, [rawModuleStudents]);
+
+  const studentsWithDuesCount = useMemo(() => {
+    return rawModuleStudents.filter(s => {
+      const rem = s.balanceRemaining ?? Math.max(0, (s.totalFeeCalculated || 0) - (s.totalFeePaid || 0));
+      return rem > 0;
+    }).length;
+  }, [rawModuleStudents]);
 
   const toggleSelectStudent = (id: string) => {
     setSelectedStudentIds(prev => 
@@ -265,10 +309,20 @@ export const PassOutSuspendedView: React.FC<PassOutSuspendedViewProps> = ({
 
       {/* Module Students Table */}
       <div className="bg-white border-2 border-[#1A1A1A] p-6 shadow-sm space-y-4 rounded-lg">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <h3 className="font-serif italic font-bold text-lg text-[#1A1A1A]">
-            {isPassOutMode ? 'Graduated / Pass Out Students List' : 'Suspended Students List'} ({moduleStudents.length})
-          </h3>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div>
+            <h3 className="font-serif italic font-bold text-lg text-[#1A1A1A]">
+              {isPassOutMode ? 'Graduated / Pass Out Students List' : 'Suspended Students List'} ({moduleStudents.length} of {rawModuleStudents.length})
+            </h3>
+            {studentsWithDuesCount > 0 && (
+              <p className="text-xs font-mono font-bold text-rose-800 mt-0.5 flex items-center gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>
+                  {studentsWithDuesCount} student(s) have pending dues totaling <strong className="underline">{formatPKR(totalModuleDues)}</strong>
+                </span>
+              </p>
+            )}
+          </div>
 
           <span className="text-[11px] font-mono text-slate-600">
             {isSuperAdmin
@@ -277,6 +331,48 @@ export const PassOutSuspendedView: React.FC<PassOutSuspendedViewProps> = ({
               ? `⚡ Custom Permissions: ${hasEditPermission ? 'Edit' : ''} ${hasDeletePermission ? 'Delete' : ''}`
               : '🔒 Standard View Mode'}
           </span>
+        </div>
+
+        {/* Search & Filter Bar for Pass Out / Suspended Students */}
+        <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 bg-[#F4F2EE] p-3 border border-[#1A1A1A] rounded">
+          {/* Search Input */}
+          <div className="sm:col-span-6 relative">
+            <Search className="w-4 h-4 text-[#1A1A1A]/50 absolute left-3 top-2.5" />
+            <input
+              type="text"
+              value={moduleSearch}
+              onChange={(e) => setModuleSearch(e.target.value)}
+              placeholder="Search by student name, Roll #, Father name, phone..."
+              className="w-full bg-white border border-[#1A1A1A] pl-9 pr-3 py-1.5 text-xs text-[#1A1A1A] font-bold focus:outline-none rounded"
+            />
+          </div>
+
+          {/* Course Filter */}
+          <div className="sm:col-span-3">
+            <select
+              value={moduleCourseFilter}
+              onChange={(e) => setModuleCourseFilter(e.target.value)}
+              className="w-full bg-white border border-[#1A1A1A] px-2.5 py-1.5 text-xs text-[#1A1A1A] font-bold focus:outline-none rounded"
+            >
+              <option value="ALL">All Courses</option>
+              {courses.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Fee Dues Filter */}
+          <div className="sm:col-span-3">
+            <select
+              value={moduleFeeFilter}
+              onChange={(e) => setModuleFeeFilter(e.target.value as any)}
+              className="w-full bg-white border border-[#1A1A1A] px-2.5 py-1.5 text-xs text-[#1A1A1A] font-bold focus:outline-none rounded"
+            >
+              <option value="ALL">All Fee Statuses</option>
+              <option value="DUE">⚠️ Has Pending Dues</option>
+              <option value="PAID">✅ Fully Cleared / Paid</option>
+            </select>
+          </div>
         </div>
 
         {/* Batch Action Toolbar for Module Students */}
@@ -324,6 +420,7 @@ export const PassOutSuspendedView: React.FC<PassOutSuspendedViewProps> = ({
                 <th className="py-3 px-3">Student Info</th>
                 <th className="py-3 px-3">Father Name</th>
                 <th className="py-3 px-3">Course(s)</th>
+                <th className="py-3 px-3">Remaining Balance / Dues</th>
                 <th className="py-3 px-3">Status Change Date</th>
                 <th className="py-3 px-3">Remarks</th>
                 <th className="py-3 px-3 text-right">Actions</th>
@@ -332,13 +429,16 @@ export const PassOutSuspendedView: React.FC<PassOutSuspendedViewProps> = ({
             <tbody className="divide-y divide-[#1A1A1A]/20">
               {moduleStudents.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-[#1A1A1A]/60 font-bold uppercase tracking-wider">
-                    No students currently listed under {isPassOutMode ? 'Pass Out' : 'Suspended'} status.
+                  <td colSpan={9} className="py-12 text-center text-[#1A1A1A]/60 font-bold uppercase tracking-wider">
+                    {moduleSearch || moduleCourseFilter !== 'ALL' || moduleFeeFilter !== 'ALL'
+                      ? 'No students matched your search and filter criteria.'
+                      : `No students currently listed under ${isPassOutMode ? 'Pass Out' : 'Suspended'} status.`}
                   </td>
                 </tr>
               ) : (
                 moduleStudents.map((s, idx) => {
                   const isSelected = moduleSelectedIds.includes(s.id);
+                  const remBalance = s.balanceRemaining ?? Math.max(0, (s.totalFeeCalculated || 0) - (s.totalFeePaid || 0));
 
                   return (
                     <tr key={s.id} className={`transition ${isSelected ? 'bg-blue-50/80' : 'hover:bg-[#F4F2EE]/50'}`}>
@@ -362,6 +462,28 @@ export const PassOutSuspendedView: React.FC<PassOutSuspendedViewProps> = ({
                     </td>
                     <td className="py-3 px-3 text-[#1A1A1A]/80">{s.fatherName}</td>
                     <td className="py-3 px-3 text-[#1A1A1A]/80">{s.courses.map(c => c.courseName).join(', ')}</td>
+                    <td className="py-3 px-3">
+                      {remBalance > 0 ? (
+                        <div className="space-y-0.5">
+                          <span className="font-mono font-black text-rose-800 bg-rose-50 border border-rose-300 px-2 py-0.5 rounded text-[11px] inline-flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3 text-rose-700 shrink-0" />
+                            <span>{formatPKR(remBalance)} Due</span>
+                          </span>
+                          <p className="text-[9px] text-slate-500 font-mono">
+                            Paid: {formatPKR(s.totalFeePaid || 0)} / {formatPKR(s.totalFeeCalculated || 0)}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-0.5">
+                          <span className="font-mono font-bold text-emerald-800 bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded text-[11px] inline-flex items-center gap-1">
+                            <span>Cleared (Rs. 0)</span>
+                          </span>
+                          <p className="text-[9px] text-slate-500 font-mono">
+                            Total: {formatPKR(s.totalFeeCalculated || 0)}
+                          </p>
+                        </div>
+                      )}
+                    </td>
                     <td className="py-3 px-3 font-mono text-[#1A1A1A]/80">{s.statusChangeDate || 'N/A'}</td>
                     <td className="py-3 px-3 text-[#1A1A1A]/80 max-w-[180px] truncate">{s.statusChangeRemarks || '-'}</td>
                     <td className="py-3 px-3 text-right">
@@ -427,8 +549,13 @@ export const PassOutSuspendedView: React.FC<PassOutSuspendedViewProps> = ({
         <EditStudentModal
           student={editingStudent}
           courses={courses}
-          onSave={(updated) => {
+          currentRole={currentRole || 'super_admin'}
+          onSaveStudent={(updated) => {
             onUpdateStudent(updated);
+            setEditingStudent(null);
+          }}
+          onDeleteStudent={(id) => {
+            if (onDeleteStudent) onDeleteStudent(id);
             setEditingStudent(null);
           }}
           onClose={() => setEditingStudent(null)}

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Course, Student, StudentCourseEnrollment, FeeTransaction } from '../types';
+import { Course, Student, StudentCourseEnrollment, FeeTransaction, OnlineApplication } from '../types';
 import { generateNextStudentId, generateNextReceiptNo, formatPKR } from '../lib/utils';
 import { 
   UserPlus, 
@@ -18,14 +18,17 @@ import {
   Percent,
   Tag,
   Image as ImageIcon,
-  Printer
+  Printer,
+  X
 } from 'lucide-react';
 
 interface AddStudentFormProps {
   courses: Course[];
   existingStudents: Student[];
   existingTxs: FeeTransaction[];
-  onAddStudent: (newStudent: Student, initialTx?: FeeTransaction, shouldPrint?: boolean) => void;
+  initialApplication?: OnlineApplication | null;
+  onClearInitialApplication?: () => void;
+  onAddStudent: (newStudent: Student, initialTx?: FeeTransaction, shouldPrint?: boolean, onlineAppId?: string) => void;
   onAddCourse?: (newCourse: Course) => void;
   onCancel?: () => void;
 }
@@ -34,6 +37,8 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
   courses,
   existingStudents,
   existingTxs,
+  initialApplication,
+  onClearInitialApplication,
   onAddStudent,
   onAddCourse,
   onCancel,
@@ -48,12 +53,45 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
   const [fatherMobileNo, setFatherMobileNo] = useState('');
   const [cnic, setCnic] = useState('');
   const [fatherCnic, setFatherCnic] = useState('');
+  const [address, setAddress] = useState('');
   const [admissionDate, setAdmissionDate] = useState(new Date().toISOString().slice(0, 10));
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('123456');
+  const [isOrphan, setIsOrphan] = useState(false);
 
   // Multi-Course Selection
   const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>(
     courses.length > 0 ? [courses[0].id] : []
   );
+
+  // Auto-fill from Online Application when provided
+  useEffect(() => {
+    if (initialApplication) {
+      if (initialApplication.applicantName) setName(initialApplication.applicantName);
+      if (initialApplication.fatherName) setFatherName(initialApplication.fatherName);
+      if (initialApplication.gender) setGender(initialApplication.gender as any);
+      if (initialApplication.mobileNo) {
+        setMobileNo(initialApplication.mobileNo);
+        setFatherMobileNo(initialApplication.mobileNo);
+      }
+      if (initialApplication.cnic) setCnic(initialApplication.cnic);
+      if (initialApplication.address) setAddress(initialApplication.address);
+      if (initialApplication.dob) setDob(initialApplication.dob);
+      if (initialApplication.photoUrl) setPhotoUrl(initialApplication.photoUrl);
+
+      if (initialApplication.courseId || initialApplication.courseName) {
+        const match = courses.find(
+          c => c.id === initialApplication.courseId || 
+               c.name.toLowerCase() === initialApplication.courseName.toLowerCase()
+        );
+        if (match) {
+          setSelectedCourseIds([match.id]);
+          setCustomMonthlyFee(match.monthlyFee || '');
+          setCustomAdmissionFee(match.admissionFee || '');
+        }
+      }
+    }
+  }, [initialApplication, courses]);
 
   // Other Custom Course State
   const [isOtherCourseSelected, setIsOtherCourseSelected] = useState<boolean>(false);
@@ -65,13 +103,13 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
   // Fee Particulars & Discount
   const [customMonthlyFee, setCustomMonthlyFee] = useState<number | ''>('');
   const [customAdmissionFee, setCustomAdmissionFee] = useState<number | ''>('');
-  const [examFeeSem1, setExamFeeSem1] = useState<number>(1500);
-  const [examFeeSem2, setExamFeeSem2] = useState<number>(1500);
-  const [otherFee, setOtherFee] = useState<number>(0);
+  const [examFeeSem1, setExamFeeSem1] = useState<number | ''>(1500);
+  const [examFeeSem2, setExamFeeSem2] = useState<number | ''>(1500);
+  const [otherFee, setOtherFee] = useState<number | ''>(0);
   const [otherFeeRemarks, setOtherFeeRemarks] = useState<string>('');
-  const [discountAmount, setDiscountAmount] = useState<number>(0);
+  const [discountAmount, setDiscountAmount] = useState<number | ''>(0);
   const [discountRemarks, setDiscountRemarks] = useState<string>('');
-  const [payAmountNow, setPayAmountNow] = useState<number>(0);
+  const [payAmountNow, setPayAmountNow] = useState<number | ''>(0);
   const [paymentSource, setPaymentSource] = useState<'cash' | 'bank'>('cash');
 
   const [errorMsg, setErrorMsg] = useState<string>('');
@@ -109,8 +147,8 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
     }
     const firstDit = courses.find(c => selectedCourseIds.includes(c.id) && (c.baseCourseType === 'DIT' || c.name.toLowerCase().includes('dit')));
     if (firstDit) {
-      setExamFeeSem1(firstDit.examFeeSem1 ?? 1500);
-      setExamFeeSem2(firstDit.examFeeSem2 ?? 1500);
+      if (examFeeSem1 === '') setExamFeeSem1(firstDit.examFeeSem1 ?? 1500);
+      if (examFeeSem2 === '') setExamFeeSem2(firstDit.examFeeSem2 ?? 1500);
     }
   }, [selectedCourseIds, courses]);
 
@@ -128,8 +166,8 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
 
       const effectiveMonthly = isLumpSum ? 0 : (customMonthlyFee !== '' ? Number(customMonthlyFee) : course.monthlyFee);
       const effectiveAdmission = isLumpSum ? 0 : (customAdmissionFee !== '' ? Number(customAdmissionFee) : course.admissionFee);
-      const sem1 = isThisDit ? (Number(course.examFeeSem1) || Number(examFeeSem1) || 0) : 0;
-      const sem2 = isThisDit ? (Number(course.examFeeSem2) || Number(examFeeSem2) || 0) : 0;
+      const sem1 = isThisDit ? (examFeeSem1 !== '' ? Number(examFeeSem1) : (Number(course.examFeeSem1) || 0)) : 0;
+      const sem2 = isThisDit ? (examFeeSem2 !== '' ? Number(examFeeSem2) : (Number(course.examFeeSem2) || 0)) : 0;
       const other = isLumpSum ? 0 : (Number(otherFee) || 0);
 
       const courseSubtotal = isLumpSum 
@@ -182,15 +220,27 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
     return { grossTotal, discount, netTotal, enrollments };
   }, [selectedCourseIds, courses, customMonthlyFee, customAdmissionFee, examFeeSem1, examFeeSem2, otherFee, otherFeeRemarks, discountAmount, discountRemarks, admissionDate, isOtherCourseSelected, otherCourseTitle, otherCourseDescription, otherCourseTotalFee, otherCourseDuration]);
 
-  const toggleCourseSelection = (courseId: string) => {
-    setSelectedCourseIds(prev => {
-      if (prev.includes(courseId)) {
-        if (prev.length === 1 && !isOtherCourseSelected) return prev; // Keep at least 1 course
-        return prev.filter(id => id !== courseId);
-      } else {
-        return [...prev, courseId];
+  const selectSingleCourse = (courseId: string) => {
+    setSelectedCourseIds([courseId]);
+    setIsOtherCourseSelected(false);
+    const c = courses.find(course => course.id === courseId);
+    if (c && c.baseCourseType !== 'Course Wise') {
+      setCustomMonthlyFee(c.monthlyFee);
+      setCustomAdmissionFee(c.admissionFee);
+      if (c.baseCourseType === 'DIT' || c.name.toLowerCase().includes('dit')) {
+        setExamFeeSem1(c.examFeeSem1 ?? 1500);
+        setExamFeeSem2(c.examFeeSem2 ?? 1500);
       }
-    });
+    }
+  };
+
+  const selectOtherCourse = () => {
+    if (isOtherCourseSelected) {
+      setIsOtherCourseSelected(false);
+    } else {
+      setIsOtherCourseSelected(true);
+      setSelectedCourseIds([]);
+    }
   };
 
   const handleProcessSubmission = (shouldPrint: boolean) => {
@@ -206,6 +256,19 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
     }
     if (!mobileNo.trim()) {
       setErrorMsg('Student Mobile Number is required.');
+      return;
+    }
+    if (username.trim()) {
+      const isTaken = existingStudents.some(
+        s => (s.username?.toLowerCase() === username.trim().toLowerCase() || s.portalUsername?.toLowerCase() === username.trim().toLowerCase())
+      );
+      if (isTaken) {
+        setErrorMsg(`Portal Username "${username.trim()}" is already taken by another student. Please enter a unique username.`);
+        return;
+      }
+    }
+    if (password.trim().length < 4) {
+      setErrorMsg('Portal password must be at least 4 characters long.');
       return;
     }
     if (selectedCourseIds.length === 0 && !isOtherCourseSelected) {
@@ -261,6 +324,11 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
     const newStudent: Student = {
       id: `std-${Date.now()}`,
       studentId: nextStudentId,
+      username: username.trim() || undefined,
+      password: password.trim() || '123456',
+      portalUsername: username.trim() || undefined,
+      portalPassword: password.trim() || '123456',
+      isOrphan,
       photoUrl: photoUrl || 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&auto=format&fit=crop&q=80',
       name: name.trim(),
       fatherName: fatherName.trim(),
@@ -270,6 +338,7 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
       fatherMobileNo: fatherMobileNo.trim() || mobileNo.trim(),
       cnic: cnic.trim() || '17301-0000000-0',
       fatherCnic: fatherCnic.trim() || '17301-0000000-0',
+      address: address.trim() || undefined,
       admissionDate,
       courses: finalEnrollments,
       discountTotal: calculatedFeeSummary.discount,
@@ -308,7 +377,7 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
       };
     }
 
-    onAddStudent(newStudent, initialTx, shouldPrint);
+    onAddStudent(newStudent, initialTx, shouldPrint, initialApplication?.id);
   };
 
   // Sample Avatar presets
@@ -340,6 +409,41 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
         </span>
       </div>
 
+      {/* Online Application Auto-Fill Notice Banner */}
+      {initialApplication && (
+        <div className="mb-6 p-4 bg-emerald-50 border-2 border-emerald-600 rounded-2xl text-emerald-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-lg shrink-0 shadow-sm">
+              🎓
+            </div>
+            <div>
+              <p className="font-bold text-sm text-emerald-950 flex items-center gap-2">
+                <span>Auto-Filled from Online Application</span>
+                <span className="text-[10px] bg-emerald-200 text-emerald-900 font-mono px-2 py-0.5 rounded-full">
+                  App ID: #{initialApplication.id}
+                </span>
+              </p>
+              <p className="text-xs text-emerald-800 mt-0.5">
+                Applicant: <strong>{initialApplication.applicantName}</strong> (S/O {initialApplication.fatherName}) • Mobile: <strong>{initialApplication.mobileNo}</strong>
+              </p>
+              <p className="text-[11px] text-emerald-700 font-medium mt-0.5">
+                Form auto-filled. Review or customize fee structures, monthly tuition, and concessions below before confirming admission.
+              </p>
+            </div>
+          </div>
+          {onClearInitialApplication && (
+            <button
+              type="button"
+              onClick={onClearInitialApplication}
+              className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs border border-slate-300 rounded-xl shrink-0 flex items-center gap-1 shadow-xs"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Clear Auto-Fill</span>
+            </button>
+          )}
+        </div>
+      )}
+
       {errorMsg && (
         <div className="mb-6 p-4 bg-rose-50 border-2 border-rose-800 text-rose-900 text-xs font-bold uppercase tracking-wider flex items-center space-x-2">
           <AlertCircle className="w-4 h-4 shrink-0" />
@@ -368,17 +472,17 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold uppercase tracking-wider text-[#1A1A1A] flex items-center space-x-1.5">
                     <Camera className="w-4 h-4 text-[#1A1A1A]" />
-                    <span>Student Photo (PC Upload / URL / Preset)</span>
+                    <span>Student Photo (Device File Upload)</span>
                   </label>
                   <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-widest bg-emerald-100 px-2 py-0.5 border border-emerald-300">
-                    PC Upload Enabled
+                    Device File Upload
                   </span>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                   <label className="cursor-pointer px-4 py-2 bg-[#1A1A1A] hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-wider border border-[#1A1A1A] inline-flex items-center justify-center space-x-2 shrink-0 transition">
                     <Upload className="w-4 h-4 text-emerald-400" />
-                    <span>Upload From PC</span>
+                    <span>Choose Photo File from PC / Mobile</span>
                     <input 
                       type="file" 
                       accept="image/*" 
@@ -387,15 +491,7 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
                     />
                   </label>
 
-                  <div className="relative flex-1">
-                    <input
-                      type="text"
-                      value={photoUrl}
-                      onChange={(e) => setPhotoUrl(e.target.value)}
-                      placeholder="Or paste photo URL link here"
-                      className="w-full bg-white border border-[#1A1A1A] px-3 py-2 text-xs text-[#1A1A1A] focus:outline-none"
-                    />
-                  </div>
+                  <p className="text-xs text-slate-600 font-medium">Select a student picture directly from your device file storage.</p>
                 </div>
                 
                 <div className="flex items-center space-x-2 pt-1">
@@ -530,6 +626,20 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
               />
             </div>
 
+            {/* Residential Address / Permanent Location */}
+            <div className="md:col-span-2">
+              <label className="block text-[10px] font-bold uppercase tracking-widest text-[#1A1A1A] mb-1.5 flex items-center gap-1">
+                <span>Residential Address / Village / City</span>
+              </label>
+              <input
+                type="text"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="House #, Street, Mohallah / Tehsil, District"
+                className="w-full bg-[#FDFCFB] border border-[#1A1A1A] px-3.5 py-2.5 text-xs text-[#1A1A1A] font-medium focus:bg-white focus:outline-none"
+              />
+            </div>
+
             {/* Admission Date */}
             <div>
               <label className="block text-[10px] font-bold uppercase tracking-widest text-[#1A1A1A] mb-1.5">
@@ -539,8 +649,67 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
                 type="date"
                 value={admissionDate}
                 onChange={(e) => setAdmissionDate(e.target.value)}
-                className="w-full bg-[#FDFCFB] border border-[#1A1A1A] px-3.5 py-2.5 text-xs text-[#1A1A1A] font-medium focus:bg-white focus:outline-none"
+                className="w-full bg-[#FDFCFB] border border-[#1A1A1A] px-3.5 py-2.5 text-xs text-[#1A1A1A] font-medium focus:bg-white focus:outline-none cursor-pointer"
               />
+            </div>
+
+            {/* Is Orphan Student Checkbox */}
+            <div className="flex items-center space-x-3 bg-amber-50 border border-amber-300 p-3 rounded-md cursor-pointer">
+              <input
+                type="checkbox"
+                id="isOrphanCheckbox"
+                checked={isOrphan}
+                onChange={(e) => setIsOrphan(e.target.checked)}
+                className="w-4 h-4 text-amber-600 border-amber-400 rounded focus:ring-amber-500 cursor-pointer"
+              />
+              <label htmlFor="isOrphanCheckbox" className="text-xs font-bold text-amber-950 cursor-pointer select-none">
+                Orphan Student (Yateem / Needy Discount)
+                <span className="block text-[10px] font-normal text-amber-800">Check if student is an orphan to display on dashboard orphan tracking.</span>
+              </label>
+            </div>
+
+            {/* Student LMS Portal Account Credentials */}
+            <div className="sm:col-span-2 md:col-span-3 bg-emerald-50 border-2 border-emerald-600 p-4 space-y-3 mt-2">
+              <div className="flex items-center space-x-2 border-b border-emerald-300 pb-2">
+                <Sparkles className="w-4 h-4 text-emerald-700" />
+                <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-950">
+                  Student LMS Portal Account Credentials
+                </h4>
+                <span className="text-[10px] bg-emerald-700 text-white font-bold px-2.5 py-0.5 uppercase tracking-wider ml-auto">
+                  Student Login
+                </span>
+              </div>
+              <p className="text-xs text-emerald-800 font-medium">
+                Set student LMS login username and password. Students can also log in using Roll No or Phone.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-emerald-950 mb-1">
+                    Portal Username (Optional / Custom)
+                  </label>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Auto-uses Roll No / Mobile if blank"
+                    className="w-full bg-white border border-emerald-400 px-3 py-2 text-xs text-slate-900 font-bold focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-emerald-950 mb-1">
+                    Portal Password *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Default: 123456"
+                    className="w-full bg-white border border-emerald-400 px-3 py-2 text-xs text-slate-900 font-mono font-bold focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+                  />
+                  <span className="text-[10px] text-emerald-800 mt-0.5 block">Student password for logging into LMS.</span>
+                </div>
+              </div>
             </div>
 
           </div>
@@ -551,33 +720,33 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
           <div className="flex items-center justify-between mb-3 border-b border-[#1A1A1A] pb-1">
             <h3 className="text-xs uppercase tracking-[0.2em] font-bold text-[#1A1A1A] flex items-center space-x-2">
               <BookOpen className="w-4 h-4 text-[#1A1A1A]" />
-              <span>2. Select Enrolled Course(s) [Multiple Selection]</span>
+              <span>2. Select Enrolled Course</span>
             </h3>
             <span className="text-[10px] font-bold uppercase tracking-wider text-[#1A1A1A]">
-              Selected: {selectedCourseIds.length} course(s)
+              Single Selection
             </span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {courses.map(course => {
-              const isSelected = selectedCourseIds.includes(course.id);
+              const isSelected = selectedCourseIds.includes(course.id) && !isOtherCourseSelected;
               const isDit = course.baseCourseType === 'DIT' || course.name.toLowerCase().includes('dit');
               const isCourseWise = course.baseCourseType === 'Course Wise';
 
               return (
                 <div
                   key={course.id}
-                  onClick={() => toggleCourseSelection(course.id)}
+                  onClick={() => selectSingleCourse(course.id)}
                   className={`p-3.5 border-2 cursor-pointer transition flex items-start space-x-3 ${
                     isSelected
                       ? 'bg-[#1A1A1A] text-white border-[#1A1A1A]'
                       : 'bg-[#F4F2EE] border-[#1A1A1A] text-[#1A1A1A] hover:bg-white'
                   }`}
                 >
-                  <div className={`w-5 h-5 border flex items-center justify-center shrink-0 mt-0.5 ${
-                    isSelected ? 'bg-white text-[#1A1A1A] border-white' : 'border-[#1A1A1A] bg-white'
+                  <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 mt-0.5 ${
+                    isSelected ? 'bg-white border-white' : 'border-[#1A1A1A] bg-white'
                   }`}>
-                    {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-[#1A1A1A]" />}
+                    {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-[#1A1A1A]" />}
                   </div>
 
                   <div className="flex-1 min-w-0">
@@ -628,17 +797,17 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
 
             {/* Custom / Other Course Option Card */}
             <div
-              onClick={() => setIsOtherCourseSelected(prev => !prev)}
+              onClick={selectOtherCourse}
               className={`p-3.5 border-2 cursor-pointer transition flex items-start space-x-3 ${
                 isOtherCourseSelected
                   ? 'bg-purple-900 text-white border-purple-900'
                   : 'bg-purple-50/80 border-purple-800 text-purple-950 hover:bg-purple-100'
               }`}
             >
-              <div className={`w-5 h-5 border flex items-center justify-center shrink-0 mt-0.5 ${
-                isOtherCourseSelected ? 'bg-white text-purple-900 border-white' : 'border-purple-800 bg-white'
+              <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 mt-0.5 ${
+                isOtherCourseSelected ? 'bg-white border-white' : 'border-purple-800 bg-white'
               }`}>
-                {isOtherCourseSelected && <CheckCircle2 className="w-3.5 h-3.5 text-purple-900" />}
+                {isOtherCourseSelected && <div className="w-2.5 h-2.5 rounded-full bg-purple-900" />}
               </div>
 
               <div className="flex-1 min-w-0">
@@ -796,7 +965,8 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
                     type="number"
                     min="0"
                     value={examFeeSem1}
-                    onChange={(e) => setExamFeeSem1(Number(e.target.value))}
+                    onChange={(e) => setExamFeeSem1(e.target.value === '' ? '' : Number(e.target.value))}
+                    onWheel={(e) => e.currentTarget.blur()}
                     className="w-full bg-[#FDFCFB] border border-[#1A1A1A] px-3 py-1.5 text-xs text-[#1A1A1A] font-mono font-bold"
                   />
                   <p className="text-[9px] text-[#1A1A1A]/60 mt-1 uppercase">1st Sem Board exam fee</p>
@@ -810,7 +980,8 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
                     type="number"
                     min="0"
                     value={examFeeSem2}
-                    onChange={(e) => setExamFeeSem2(Number(e.target.value))}
+                    onChange={(e) => setExamFeeSem2(e.target.value === '' ? '' : Number(e.target.value))}
+                    onWheel={(e) => e.currentTarget.blur()}
                     className="w-full bg-[#FDFCFB] border border-[#1A1A1A] px-3 py-1.5 text-xs text-[#1A1A1A] font-mono font-bold"
                   />
                   <p className="text-[9px] text-[#1A1A1A]/60 mt-1 uppercase">2nd Sem Board exam fee</p>
@@ -827,7 +998,8 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
                 type="number"
                 min="0"
                 value={otherFee}
-                onChange={(e) => setOtherFee(Number(e.target.value))}
+                onChange={(e) => setOtherFee(e.target.value === '' ? '' : Number(e.target.value))}
+                onWheel={(e) => e.currentTarget.blur()}
                 placeholder="0"
                 className="w-full bg-[#FDFCFB] border border-[#1A1A1A] px-3 py-1.5 text-xs text-[#1A1A1A] font-mono font-bold"
               />
@@ -860,9 +1032,9 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
               <input
                 type="number"
                 min="0"
-                max={calculatedFeeSummary.grossTotal}
                 value={discountAmount}
-                onChange={(e) => setDiscountAmount(Number(e.target.value))}
+                onChange={(e) => setDiscountAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                onWheel={(e) => e.currentTarget.blur()}
                 placeholder="0"
                 className="w-full bg-white border border-emerald-700 px-3 py-1.5 text-xs text-emerald-950 font-mono font-extrabold focus:outline-none"
               />
@@ -914,9 +1086,9 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({
               <input
                 type="number"
                 min="0"
-                max={calculatedFeeSummary.netTotal}
                 value={payAmountNow}
-                onChange={(e) => setPayAmountNow(Number(e.target.value))}
+                onChange={(e) => setPayAmountNow(e.target.value === '' ? '' : Number(e.target.value))}
+                onWheel={(e) => e.currentTarget.blur()}
                 placeholder="Enter paid amount"
                 className="w-full bg-[#FDFCFB] border-2 border-[#1A1A1A] px-3.5 py-2.5 text-sm text-[#1A1A1A] font-mono font-bold focus:outline-none"
               />

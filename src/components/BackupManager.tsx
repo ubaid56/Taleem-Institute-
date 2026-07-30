@@ -22,7 +22,7 @@ import {
   resetToDefaultData,
   wipeAllDataCompletely
 } from '../lib/storage';
-import { wipeAllFirestoreRecordsCompletely } from '../lib/firebase';
+import { wipeAllFirestoreRecordsCompletely, forceReSeedDefaultFirestoreData } from '../lib/firebase';
 import { formatPKR } from '../lib/utils';
 
 interface BackupManagerProps {
@@ -79,6 +79,109 @@ export const BackupManager: React.FC<BackupManagerProps> = ({ showToast, onRefre
     }
   };
 
+  const handleExportSqlDump = () => {
+    try {
+      let sql = `-- ==========================================================\n`;
+      sql += `-- TALEEM INSTITUTE MANAGEMENT SYSTEM - SQL DATABASE DUMP\n`;
+      sql += `-- Compatible with Hostinger MySQL, MariaDB & PostgreSQL\n`;
+      sql += `-- Generated: ${new Date().toLocaleString()}\n`;
+      sql += `-- ==========================================================\n\n`;
+
+      sql += `-- --------------------------------------------------------\n`;
+      sql += `-- Table structure for institute_settings\n`;
+      sql += `-- --------------------------------------------------------\n`;
+      sql += `CREATE TABLE IF NOT EXISTS institute_settings (\n`;
+      sql += `  id INT PRIMARY KEY AUTO_INCREMENT,\n`;
+      sql += `  institute_name VARCHAR(255),\n`;
+      sql += `  tagline VARCHAR(255),\n`;
+      sql += `  phone VARCHAR(100),\n`;
+      sql += `  address TEXT,\n`;
+      sql += `  currency VARCHAR(50)\n`;
+      sql += `);\n\n`;
+
+      const safeName = (settings.instituteName || '').replace(/'/g, "''");
+      const safeTag = (settings.subTitle || '').replace(/'/g, "''");
+      const safePhone = (settings.phone || '').replace(/'/g, "''");
+      const safeAddr = (settings.address || '').replace(/'/g, "''");
+      sql += `INSERT INTO institute_settings (id, institute_name, tagline, phone, address, currency) VALUES (1, '${safeName}', '${safeTag}', '${safePhone}', '${safeAddr}', 'PKR');\n\n`;
+
+      sql += `-- --------------------------------------------------------\n`;
+      sql += `-- Table structure for courses\n`;
+      sql += `-- --------------------------------------------------------\n`;
+      sql += `CREATE TABLE IF NOT EXISTS courses (\n`;
+      sql += `  id VARCHAR(100) PRIMARY KEY,\n`;
+      sql += `  course_name VARCHAR(255),\n`;
+      sql += `  base_category VARCHAR(100),\n`;
+      sql += `  duration_months INT,\n`;
+      sql += `  monthly_fee DECIMAL(10,2),\n`;
+      sql += `  admission_fee DECIMAL(10,2)\n`;
+      sql += `);\n\n`;
+
+      courses.forEach(c => {
+        const cName = (c.name || '').replace(/'/g, "''");
+        const cCat = (c.baseCourseType || 'IT & Technical Skills').replace(/'/g, "''");
+        sql += `INSERT INTO courses (id, course_name, base_category, duration_months, monthly_fee, admission_fee) VALUES ('${c.id}', '${cName}', '${cCat}', ${c.durationMonths || 1}, ${c.monthlyFee || 0}, ${c.admissionFee || 0});\n`;
+      });
+      sql += `\n`;
+
+      sql += `-- --------------------------------------------------------\n`;
+      sql += `-- Table structure for students\n`;
+      sql += `-- --------------------------------------------------------\n`;
+      sql += `CREATE TABLE IF NOT EXISTS students (\n`;
+      sql += `  id VARCHAR(100) PRIMARY KEY,\n`;
+      sql += `  student_id VARCHAR(100),\n`;
+      sql += `  name VARCHAR(255),\n`;
+      sql += `  father_name VARCHAR(255),\n`;
+      sql += `  mobile_no VARCHAR(100),\n`;
+      sql += `  course_id VARCHAR(100),\n`;
+      sql += `  status VARCHAR(50),\n`;
+      sql += `  admission_date VARCHAR(100)\n`;
+      sql += `);\n\n`;
+
+      students.forEach(s => {
+        const sName = (s.name || '').replace(/'/g, "''");
+        const fName = (s.fatherName || '').replace(/'/g, "''");
+        const mob = (s.mobileNo || '').replace(/'/g, "''");
+        const cId = s.courses?.[0]?.courseId || '';
+        sql += `INSERT INTO students (id, student_id, name, father_name, mobile_no, course_id, status, admission_date) VALUES ('${s.id}', '${s.studentId}', '${sName}', '${fName}', '${mob}', '${cId}', '${s.status}', '${s.admissionDate}');\n`;
+      });
+      sql += `\n`;
+
+      sql += `-- --------------------------------------------------------\n`;
+      sql += `-- Table structure for fee_transactions\n`;
+      sql += `-- --------------------------------------------------------\n`;
+      sql += `CREATE TABLE IF NOT EXISTS fee_transactions (\n`;
+      sql += `  id VARCHAR(100) PRIMARY KEY,\n`;
+      sql += `  voucher_no VARCHAR(100),\n`;
+      sql += `  student_id VARCHAR(100),\n`;
+      sql += `  amount_paid DECIMAL(10,2),\n`;
+      sql += `  month_year VARCHAR(100),\n`;
+      sql += `  date VARCHAR(100)\n`;
+      sql += `);\n\n`;
+
+      transactions.forEach(t => {
+        const vNo = (t.receiptNo || '').replace(/'/g, "''");
+        const mYr = (t.courseNames?.join(', ') || '').replace(/'/g, "''");
+        const payDate = (t.paymentDate || '').replace(/'/g, "''");
+        sql += `INSERT INTO fee_transactions (id, voucher_no, student_id, amount_paid, month_year, date) VALUES ('${t.id}', '${vNo}', '${t.studentId}', ${t.amountPaid || 0}, '${mYr}', '${payDate}');\n`;
+      });
+      sql += `\n`;
+
+      const dataStr = "data:text/sql;charset=utf-8," + encodeURIComponent(sql);
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `hostinger_tist_database_dump_${new Date().toISOString().slice(0, 10)}.sql`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+
+      showToast('Hostinger MySQL Database Dump (.sql) downloaded successfully!');
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to export SQL dump.');
+    }
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -114,10 +217,11 @@ export const BackupManager: React.FC<BackupManagerProps> = ({ showToast, onRefre
     reader.readAsText(file);
   };
 
-  const handleResetDemo = () => {
+  const handleResetDemo = async () => {
     resetToDefaultData();
+    await forceReSeedDefaultFirestoreData();
     setShowResetConfirm(false);
-    showToast('Database reset to initial demo state.');
+    showToast('Database restored to initial default sample data across LocalStorage and Cloud Firestore.');
     onRefreshData();
   };
 
@@ -156,13 +260,36 @@ export const BackupManager: React.FC<BackupManagerProps> = ({ showToast, onRefre
           </div>
         </div>
 
-        <button
-          onClick={handleExportJson}
-          className="w-full md:w-auto justify-center px-5 py-3 bg-[#1A1A1A] hover:bg-[#333] text-white font-bold text-xs uppercase tracking-widest shadow-md flex items-center space-x-2 transition shrink-0"
-        >
-          <Download className="w-4 h-4 shrink-0" />
-          <span>Download Full JSON Backup</span>
-        </button>
+        <div className="flex items-center space-x-2 shrink-0 w-full md:w-auto">
+          <button
+            onClick={handleExportJson}
+            className="flex-1 md:flex-none justify-center px-4 py-2.5 bg-[#1A1A1A] hover:bg-[#333] text-white font-bold text-xs uppercase tracking-wider shadow-xs flex items-center space-x-1.5 transition"
+          >
+            <Download className="w-3.5 h-3.5 shrink-0" />
+            <span>JSON Backup</span>
+          </button>
+          <button
+            onClick={handleExportSqlDump}
+            className="flex-1 md:flex-none justify-center px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs uppercase tracking-wider shadow-xs flex items-center space-x-1.5 transition border border-emerald-900"
+          >
+            <Database className="w-3.5 h-3.5 shrink-0" />
+            <span>SQL Dump (.sql)</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Hostinger & Firebase Database Architecture Notice */}
+      <div className="bg-emerald-950 border-2 border-emerald-600 p-5 text-white space-y-2">
+        <div className="flex items-center space-x-2">
+          <ShieldCheck className="w-5 h-5 text-emerald-400" />
+          <h3 className="font-serif italic font-bold text-base text-emerald-300">Database Storage & Hostinger Hosting Compatibility</h3>
+        </div>
+        <p className="text-xs text-slate-200 leading-relaxed">
+          <strong>100% Persistent Storage:</strong> All student records, courses, fee transactions, and staff data are saved continuously in <strong>Firebase Cloud Firestore</strong> and mirrored locally in browser memory. Data will NOT disappear upon refresh or closing Chrome.
+        </p>
+        <p className="text-xs text-slate-300 font-mono">
+          • Hosting on Hostinger: You can host this web application on Hostinger static/web hosting while keeping Firebase Firestore active, or download the <strong>.sql</strong> database file above to import directly into Hostinger phpMyAdmin / MySQL!
+        </p>
       </div>
 
       {/* Database Quick Stats */}
@@ -201,19 +328,28 @@ export const BackupManager: React.FC<BackupManagerProps> = ({ showToast, onRefre
               Download a complete JSON file containing all students, courses, fee transactions, attendance logs, staff users, payroll records, and institute settings.
             </p>
             <div className="p-3 bg-[#F4F2EE] border border-[#1A1A1A] text-[11px] font-mono text-[#1A1A1A] space-y-1">
-              <p>• Format: Standard JSON (.json)</p>
-              <p>• Auto-Export: Enabled on General Settings save</p>
+              <p>• Formats: Standard JSON (.json) & SQL Dump (.sql)</p>
+              <p>• Hostinger Compatible: Includes MySQL schema & tables</p>
               <p>• Includes: {students.length} students, {transactions.length} fee vouchers, {users.length} staff users</p>
             </div>
           </div>
 
-          <button
-            onClick={handleExportJson}
-            className="w-full py-3 bg-[#1A1A1A] hover:bg-[#333] text-white font-bold text-xs uppercase tracking-widest flex items-center justify-center space-x-2 transition"
-          >
-            <Download className="w-4 h-4" />
-            <span>Export Database JSON</span>
-          </button>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={handleExportJson}
+              className="py-3 bg-[#1A1A1A] hover:bg-[#333] text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center space-x-1.5 transition"
+            >
+              <Download className="w-4 h-4 text-emerald-400" />
+              <span>Export JSON</span>
+            </button>
+            <button
+              onClick={handleExportSqlDump}
+              className="py-3 bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center space-x-1.5 transition border border-emerald-950"
+            >
+              <Database className="w-4 h-4 text-emerald-300" />
+              <span>Export SQL Dump</span>
+            </button>
+          </div>
         </div>
 
         {/* Import / Restore Card */}

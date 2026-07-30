@@ -1,5 +1,5 @@
-import { Course, Student, FeeTransaction, AttendanceRecord, StaffUser, UserRole, InstituteSettings, Expense, StaffSalaryRecord } from '../types';
-import { INITIAL_COURSES, INITIAL_STUDENTS, INITIAL_TRANSACTIONS, INITIAL_ATTENDANCE, INITIAL_USERS, DEFAULT_SETTINGS, INITIAL_EXPENSES, INITIAL_SALARY_RECORDS } from '../data/initialData';
+import { Course, Student, FeeTransaction, AttendanceRecord, StaffUser, UserRole, InstituteSettings, Expense, StaffSalaryRecord, PublicStaffMember, PublicEvent, Assignment, AssignmentSubmission, OnlineApplication, InstituteNotice } from '../types';
+import { INITIAL_COURSES, INITIAL_STUDENTS, INITIAL_TRANSACTIONS, INITIAL_ATTENDANCE, INITIAL_USERS, DEFAULT_SETTINGS, INITIAL_EXPENSES, INITIAL_SALARY_RECORDS, INITIAL_PUBLIC_STAFF, INITIAL_PUBLIC_EVENTS, INITIAL_ASSIGNMENTS, INITIAL_ASSIGNMENT_SUBMISSIONS, INITIAL_ONLINE_APPLICATIONS, INITIAL_NOTICES } from '../data/initialData';
 
 const STORAGE_KEYS = {
   COURSES: 'tist_courses_v1',
@@ -13,6 +13,13 @@ const STORAGE_KEYS = {
   SETTINGS: 'tist_settings_v1',
   IS_LOGGED_IN: 'tist_is_logged_in_v1',
   LOGGED_IN_USER: 'tist_logged_in_user_v1',
+  PUBLIC_STAFF: 'tist_public_staff_v1',
+  PUBLIC_EVENTS: 'tist_public_events_v1',
+  ASSIGNMENTS: 'tist_assignments_v1',
+  ASSIGNMENT_SUBMISSIONS: 'tist_assignment_submissions_v1',
+  ONLINE_APPLICATIONS: 'tist_online_applications_v1',
+  NOTICES: 'tist_notices_v1',
+  LOGGED_IN_STUDENT: 'tist_logged_in_student_v1',
 };
 
 // Safe JSON Parse
@@ -108,6 +115,27 @@ export const updateLastActiveTime = () => {
 export const getLoggedInUser = (): StaffUser | null => safeParse(STORAGE_KEYS.LOGGED_IN_USER, null);
 export const setLoggedInUserState = (user: StaffUser | null) => safeSave(STORAGE_KEYS.LOGGED_IN_USER, user);
 
+export const getPublicStaff = (): PublicStaffMember[] => safeParse(STORAGE_KEYS.PUBLIC_STAFF, INITIAL_PUBLIC_STAFF);
+export const savePublicStaff = (staff: PublicStaffMember[]) => safeSave(STORAGE_KEYS.PUBLIC_STAFF, staff);
+
+export const getPublicEvents = (): PublicEvent[] => safeParse(STORAGE_KEYS.PUBLIC_EVENTS, INITIAL_PUBLIC_EVENTS);
+export const savePublicEvents = (events: PublicEvent[]) => safeSave(STORAGE_KEYS.PUBLIC_EVENTS, events);
+
+export const getAssignments = (): Assignment[] => safeParse(STORAGE_KEYS.ASSIGNMENTS, INITIAL_ASSIGNMENTS);
+export const saveAssignments = (asgs: Assignment[]) => safeSave(STORAGE_KEYS.ASSIGNMENTS, asgs);
+
+export const getAssignmentSubmissions = (): AssignmentSubmission[] => safeParse(STORAGE_KEYS.ASSIGNMENT_SUBMISSIONS, INITIAL_ASSIGNMENT_SUBMISSIONS);
+export const saveAssignmentSubmissions = (subs: AssignmentSubmission[]) => safeSave(STORAGE_KEYS.ASSIGNMENT_SUBMISSIONS, subs);
+
+export const getOnlineApplications = (): OnlineApplication[] => safeParse(STORAGE_KEYS.ONLINE_APPLICATIONS, INITIAL_ONLINE_APPLICATIONS);
+export const saveOnlineApplications = (apps: OnlineApplication[]) => safeSave(STORAGE_KEYS.ONLINE_APPLICATIONS, apps);
+
+export const getNotices = (): InstituteNotice[] => safeParse(STORAGE_KEYS.NOTICES, INITIAL_NOTICES);
+export const saveNotices = (notices: InstituteNotice[]) => safeSave(STORAGE_KEYS.NOTICES, notices);
+
+export const getLoggedInStudent = (): Student | null => safeParse(STORAGE_KEYS.LOGGED_IN_STUDENT, null);
+export const setLoggedInStudentState = (student: Student | null) => safeSave(STORAGE_KEYS.LOGGED_IN_STUDENT, student);
+
 // Reset storage to demo defaults
 export const resetToDefaultData = () => {
   localStorage.removeItem('tist_explicitly_cleared');
@@ -118,6 +146,11 @@ export const resetToDefaultData = () => {
   safeSave(STORAGE_KEYS.USERS, INITIAL_USERS);
   safeSave(STORAGE_KEYS.EXPENSES, INITIAL_EXPENSES);
   safeSave(STORAGE_KEYS.SALARY_RECORDS, INITIAL_SALARY_RECORDS);
+  safeSave(STORAGE_KEYS.PUBLIC_STAFF, INITIAL_PUBLIC_STAFF);
+  safeSave(STORAGE_KEYS.PUBLIC_EVENTS, INITIAL_PUBLIC_EVENTS);
+  safeSave(STORAGE_KEYS.ASSIGNMENTS, INITIAL_ASSIGNMENTS);
+  safeSave(STORAGE_KEYS.ASSIGNMENT_SUBMISSIONS, INITIAL_ASSIGNMENT_SUBMISSIONS);
+  safeSave(STORAGE_KEYS.ONLINE_APPLICATIONS, INITIAL_ONLINE_APPLICATIONS);
   safeSave(STORAGE_KEYS.CURRENT_ROLE, 'super_admin');
   safeSave(STORAGE_KEYS.SETTINGS, DEFAULT_SETTINGS);
   safeSave(STORAGE_KEYS.IS_LOGGED_IN, true);
@@ -131,5 +164,8 @@ export const wipeAllDataCompletely = () => {
   safeSave(STORAGE_KEYS.ATTENDANCE, []);
   safeSave(STORAGE_KEYS.EXPENSES, []);
   safeSave(STORAGE_KEYS.SALARY_RECORDS, []);
+  safeSave(STORAGE_KEYS.ONLINE_APPLICATIONS, []);
+  safeSave(STORAGE_KEYS.ASSIGNMENTS, []);
+  safeSave(STORAGE_KEYS.ASSIGNMENT_SUBMISSIONS, []);
 };
 

@@ -311,22 +311,13 @@ export const UserAccessManager: React.FC<UserAccessManagerProps> = ({
               <div className="space-y-2 text-center sm:text-left flex-1">
                 <label className="block text-xs font-bold uppercase tracking-wider text-[#1A1A1A]">Staff Profile Photo</label>
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                  <label className="px-3 py-1.5 bg-[#1A1A1A] hover:bg-[#333] text-white text-xs font-bold uppercase tracking-wider cursor-pointer flex items-center space-x-1">
-                    <Upload className="w-3.5 h-3.5" />
-                    <span>Upload Picture</span>
+                  <label className="px-3.5 py-2 bg-[#1A1A1A] hover:bg-[#333] text-white text-xs font-bold uppercase tracking-wider cursor-pointer flex items-center space-x-1 shadow-xs">
+                    <Upload className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Choose Photo File from PC / Device</span>
                     <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
                   </label>
-
-                  <span className="text-[10px] text-[#1A1A1A]/60 uppercase font-bold">OR Photo URL:</span>
-                  <input
-                    type="url"
-                    value={photoUrl}
-                    onChange={(e) => setPhotoUrl(e.target.value)}
-                    placeholder="https://..."
-                    className="bg-white border border-[#1A1A1A] px-2.5 py-1 text-xs font-mono w-full sm:w-64 focus:outline-none"
-                  />
                 </div>
-                <p className="text-[10px] font-mono text-[#1A1A1A]/60">Supports JPEG, PNG or WebP images up to 2MB</p>
+                <p className="text-[10px] font-mono text-[#1A1A1A]/70">Supports JPEG, PNG or WebP images uploaded directly from your device file storage.</p>
               </div>
             </div>
 

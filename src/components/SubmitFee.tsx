@@ -25,7 +25,7 @@ export const SubmitFee: React.FC<SubmitFeeProps> = ({
   const [selectedStudentId, setSelectedStudentId] = useState<string>('');
 
   // Payment Form Fields
-  const [payAmount, setPayAmount] = useState<number>(1500);
+  const [payAmount, setPayAmount] = useState<number | ''>(1500);
   const [isManualAmount, setIsManualAmount] = useState<boolean>(false);
   const [paymentSource, setPaymentSource] = useState<'cash' | 'bank'>('cash');
   const [remarks, setRemarks] = useState<string>('Monthly Fee Submission');
@@ -33,20 +33,20 @@ export const SubmitFee: React.FC<SubmitFeeProps> = ({
 
   // Itemized Fee Breakdown Fields
   const [includeMonthly, setIncludeMonthly] = useState<boolean>(true);
-  const [monthlyFeeAmount, setMonthlyFeeAmount] = useState<number>(1500);
+  const [monthlyFeeAmount, setMonthlyFeeAmount] = useState<number | ''>(1500);
   const [monthlyFeeMonth, setMonthlyFeeMonth] = useState<string>('July 2026');
 
   const [includeExam, setIncludeExam] = useState<boolean>(false);
-  const [examFeeAmount, setExamFeeAmount] = useState<number>(5000);
+  const [examFeeAmount, setExamFeeAmount] = useState<number | ''>(5000);
 
   const [includeAdmission, setIncludeAdmission] = useState<boolean>(false);
-  const [admissionFeeAmount, setAdmissionFeeAmount] = useState<number>(1000);
+  const [admissionFeeAmount, setAdmissionFeeAmount] = useState<number | ''>(1000);
 
   const [includeOther, setIncludeOther] = useState<boolean>(false);
   const [otherFeeTitle, setOtherFeeTitle] = useState<string>('Late Fee / Fine');
-  const [otherFeeAmount, setOtherFeeAmount] = useState<number>(500);
+  const [otherFeeAmount, setOtherFeeAmount] = useState<number | ''>(500);
 
-  const [discountAmount, setDiscountAmount] = useState<number>(0);
+  const [discountAmount, setDiscountAmount] = useState<number | ''>(0);
 
   // Auto calculate sum of breakdown
   const computedBreakdownTotal = useMemo(() => {
@@ -56,7 +56,7 @@ export const SubmitFee: React.FC<SubmitFeeProps> = ({
     if (includeAdmission) sum += Number(admissionFeeAmount) || 0;
     if (includeOther) sum += Number(otherFeeAmount) || 0;
     sum -= Number(discountAmount) || 0;
-    return Math.max(0, sum);
+    return Math.round(Math.max(0, sum));
   }, [includeMonthly, monthlyFeeAmount, includeExam, examFeeAmount, includeAdmission, admissionFeeAmount, includeOther, otherFeeAmount, discountAmount]);
 
   // Sync payAmount with computed total unless user typed manually
@@ -101,7 +101,13 @@ export const SubmitFee: React.FC<SubmitFeeProps> = ({
       if (isCourseWiseStudent) {
         setIncludeMonthly(false);
         setIncludeAdmission(false);
+      } else {
+        setIncludeMonthly(true);
       }
+      setIncludeExam(false);
+      setIncludeOther(false);
+      setDiscountAmount(0);
+
       const customMonthly = selectedStudent.assignedMonthlyFee ?? selectedStudent.courses?.[0]?.monthlyFee ?? 1500;
       const customAdmission = selectedStudent.assignedAdmissionFee ?? selectedStudent.courses?.[0]?.admissionFee ?? 1000;
       const customExam = selectedStudent.assignedExamFee ?? selectedStudent.courses?.[0]?.examFeeSem1 ?? 5000;
@@ -403,9 +409,10 @@ export const SubmitFee: React.FC<SubmitFeeProps> = ({
                             min="0"
                             value={monthlyFeeAmount}
                             onChange={(e) => {
-                              setMonthlyFeeAmount(Number(e.target.value));
+                              setMonthlyFeeAmount(e.target.value === '' ? '' : Math.round(Number(e.target.value)));
                               setIsManualAmount(false);
                             }}
+                            onWheel={(e) => (e.target as HTMLElement).blur()}
                             className="w-full bg-[#FDFCFB] border border-[#1A1A1A] px-2 py-1 text-xs font-mono font-bold text-[#1A1A1A]"
                           />
                         </div>
@@ -438,9 +445,10 @@ export const SubmitFee: React.FC<SubmitFeeProps> = ({
                           min="0"
                           value={examFeeAmount}
                           onChange={(e) => {
-                            setExamFeeAmount(Number(e.target.value));
+                            setExamFeeAmount(e.target.value === '' ? '' : Math.round(Number(e.target.value)));
                             setIsManualAmount(false);
                           }}
+                          onWheel={(e) => (e.target as HTMLElement).blur()}
                           placeholder="e.g. 5000"
                           className="w-full bg-[#FDFCFB] border border-[#1A1A1A] px-2 py-1 text-xs font-mono font-bold text-[#1A1A1A]"
                         />
@@ -475,9 +483,10 @@ export const SubmitFee: React.FC<SubmitFeeProps> = ({
                           min="0"
                           value={admissionFeeAmount}
                           onChange={(e) => {
-                            setAdmissionFeeAmount(Number(e.target.value));
+                            setAdmissionFeeAmount(e.target.value === '' ? '' : Math.round(Number(e.target.value)));
                             setIsManualAmount(false);
                           }}
+                          onWheel={(e) => (e.target as HTMLElement).blur()}
                           placeholder="e.g. 1000"
                           className="w-full bg-[#FDFCFB] border border-[#1A1A1A] px-2 py-1 text-xs font-mono font-bold text-[#1A1A1A]"
                         />
@@ -521,9 +530,10 @@ export const SubmitFee: React.FC<SubmitFeeProps> = ({
                             min="0"
                             value={otherFeeAmount}
                             onChange={(e) => {
-                              setOtherFeeAmount(Number(e.target.value));
+                              setOtherFeeAmount(e.target.value === '' ? '' : Math.round(Number(e.target.value)));
                               setIsManualAmount(false);
                             }}
+                            onWheel={(e) => (e.target as HTMLElement).blur()}
                             className="w-full bg-[#FDFCFB] border border-[#1A1A1A] px-2 py-1 text-xs font-mono font-bold text-[#1A1A1A]"
                           />
                         </div>
@@ -541,9 +551,10 @@ export const SubmitFee: React.FC<SubmitFeeProps> = ({
                       min="0"
                       value={discountAmount}
                       onChange={(e) => {
-                        setDiscountAmount(Number(e.target.value));
+                        setDiscountAmount(e.target.value === '' ? '' : Math.round(Number(e.target.value)));
                         setIsManualAmount(false);
                       }}
+                      onWheel={(e) => (e.target as HTMLElement).blur()}
                       placeholder="e.g. 0"
                       className="w-full bg-white border border-emerald-800 px-2 py-1 text-xs font-mono font-bold text-emerald-900"
                     />
@@ -566,9 +577,10 @@ export const SubmitFee: React.FC<SubmitFeeProps> = ({
                       min="1"
                       value={payAmount}
                       onChange={(e) => {
-                        setPayAmount(Number(e.target.value));
+                        setPayAmount(e.target.value === '' ? '' : Math.round(Number(e.target.value)));
                         setIsManualAmount(true);
                       }}
+                      onWheel={(e) => (e.target as HTMLElement).blur()}
                       className="w-full bg-[#FDFCFB] border-2 border-[#1A1A1A] px-3.5 py-2.5 text-lg font-mono font-black text-[#1A1A1A] focus:outline-none focus:bg-white"
                     />
                   </div>

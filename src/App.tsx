@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserRole, Course, Student, FeeTransaction, AttendanceRecord, StaffUser, StudentStatus, InstituteSettings, Expense, StaffSalaryRecord } from './types';
+import { UserRole, Course, Student, FeeTransaction, AttendanceRecord, StaffUser, StudentStatus, InstituteSettings, Expense, StaffSalaryRecord, PublicStaffMember, PublicEvent, Assignment, AssignmentSubmission, OnlineApplication } from './types';
 import { 
   getCourses, saveCourses,
   getStudents, saveStudents,
@@ -10,17 +10,29 @@ import {
   getSalaryRecords, saveSalaryRecords,
   getCurrentRole, setCurrentRole,
   getSettings, saveSettings,
+  getPublicStaff, savePublicStaff,
+  getPublicEvents, savePublicEvents,
+  getAssignments, saveAssignments,
+  getAssignmentSubmissions, saveAssignmentSubmissions,
+  getOnlineApplications, saveOnlineApplications,
+  getLoggedInStudent, setLoggedInStudentState,
   getIsLoggedIn, setIsLoggedInState, updateLastActiveTime,
   resetToDefaultData
 } from './lib/storage';
 import {
   seedInitialFirestoreDataIfEmpty,
+  forceReSeedDefaultFirestoreData,
   subscribeSettings,
   subscribeCourses,
   subscribeStudents,
   subscribeTransactions,
   subscribeAttendance,
   subscribeUsers,
+  subscribePublicStaff,
+  subscribePublicEvents,
+  subscribeAssignments,
+  subscribeAssignmentSubmissions,
+  subscribeOnlineApplications,
   dbSaveSettings,
   dbSaveStudent,
   dbSaveStudents,
@@ -32,7 +44,16 @@ import {
   dbDeleteCourse,
   dbSaveAttendance,
   dbSaveUser,
-  dbDeleteUser
+  dbDeleteUser,
+  dbSavePublicStaff,
+  dbDeletePublicStaff,
+  dbSavePublicEvent,
+  dbDeletePublicEvent,
+  dbSaveAssignment,
+  dbDeleteAssignment,
+  dbSaveAssignmentSubmission,
+  dbSaveOnlineApplication,
+  dbDeleteOnlineApplication
 } from './lib/firebase';
 
 import { Header } from './components/Header';
@@ -56,6 +77,19 @@ import { ProfitLossReport } from './components/ProfitLossReport';
 import { LoginForm } from './components/LoginForm';
 import { BackupManager } from './components/BackupManager';
 
+// Public Website & LMS Portal Imports
+import { PublicNavbar } from './components/PublicWebsite/PublicNavbar';
+import { PublicFooter } from './components/PublicWebsite/PublicFooter';
+import { PublicHomePage } from './components/PublicWebsite/PublicHomePage';
+import { PublicAboutPage } from './components/PublicWebsite/PublicAboutPage';
+import { PublicCoursesPage } from './components/PublicWebsite/PublicCoursesPage';
+import { PublicEventsPage } from './components/PublicWebsite/PublicEventsPage';
+import { PublicContactPage } from './components/PublicWebsite/PublicContactPage';
+import { OnlineApplyModal } from './components/PublicWebsite/OnlineApplyModal';
+import { StudentPortal } from './components/StudentPortal/StudentPortal';
+import { AssignmentsManager } from './components/AssignmentsManager';
+import { WebsiteCMSManager } from './components/WebsiteCMSManager';
+
 export default function App() {
   // Application Persistence State
   const [courses, setCoursesState] = useState<Course[]>(getCourses);
@@ -68,14 +102,36 @@ export default function App() {
   const [currentRole, setRoleState] = useState<UserRole>(getCurrentRole);
   const [settings, setSettingsState] = useState<InstituteSettings>(getSettings);
 
-  // Authentication State
+  // LMS & Public Website State
+  const [publicStaff, setPublicStaffState] = useState<PublicStaffMember[]>(getPublicStaff);
+  const [publicEvents, setPublicEventsState] = useState<PublicEvent[]>(getPublicEvents);
+  const [assignments, setAssignmentsState] = useState<Assignment[]>(getAssignments);
+  const [assignmentSubmissions, setAssignmentSubmissionsState] = useState<AssignmentSubmission[]>(getAssignmentSubmissions);
+  const [onlineApplications, setOnlineApplicationsState] = useState<OnlineApplication[]>(getOnlineApplications);
+  const [initialApplicationForAdmission, setInitialApplicationForAdmission] = useState<OnlineApplication | null>(null);
+  const [loggedInStudent, setLoggedInStudent] = useState<Student | null>(getLoggedInStudent);
+
+  // Application View Mode: 'public' (Default Public Website), 'student_portal', 'staff_portal'
+  const [viewMode, setViewMode] = useState<'public' | 'student_portal' | 'staff_portal'>('public');
+  const [publicTab, setPublicTab] = useState<'home' | 'about' | 'courses' | 'events' | 'contact'>('home');
+
+  // Modal State for Online Admission Application
+  const [showOnlineApplyModal, setShowOnlineApplyModal] = useState(false);
+  const [applyCourseId, setApplyCourseId] = useState<string | undefined>(undefined);
+
+  // Staff Authentication State
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(getIsLoggedIn);
 
-  // Active View Tab
+  // Active View Tab inside Staff Portal
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
 
-  // Mobile Navigation Drawer State
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+  // Navigation Sidebar Open/Collapsed State (Defaults to open on desktop/laptop >= 768px)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 768;
+    }
+    return true;
+  });
 
   // Thermal Receipt Modal
   const [activeReceiptTx, setActiveReceiptTx] = useState<FeeTransaction | null>(null);
@@ -90,23 +146,6 @@ export default function App() {
 
   // Setup Firestore real-time cross-device synchronization
   useEffect(() => {
-    // Perform one-time auto-purge of old demo records across storage and Firestore for fresh final data entry
-    const isCleaned = localStorage.getItem('tist_db_cleared_v5');
-    if (!isCleaned) {
-      localStorage.setItem('tist_db_cleared_v5', 'true');
-      setStudentsState([]);
-      saveStudents([]);
-      setTransactionsState([]);
-      saveTransactions([]);
-      setAttendanceState([]);
-      saveAttendance([]);
-      setExpensesState([]);
-      saveExpenses([]);
-      setSalaryRecordsState([]);
-      saveSalaryRecords([]);
-      dbClearAllStudents();
-    }
-
     // Seed Firestore if empty
     seedInitialFirestoreDataIfEmpty();
 
@@ -145,6 +184,35 @@ export default function App() {
       }
     });
 
+    const unsubPublicStaff = subscribePublicStaff((data) => {
+      if (data.length > 0) {
+        setPublicStaffState(data);
+        savePublicStaff(data);
+      }
+    });
+
+    const unsubPublicEvents = subscribePublicEvents((data) => {
+      if (data.length > 0) {
+        setPublicEventsState(data);
+        savePublicEvents(data);
+      }
+    });
+
+    const unsubAssignments = subscribeAssignments((data) => {
+      setAssignmentsState(data);
+      saveAssignments(data);
+    });
+
+    const unsubAssignmentSubmissions = subscribeAssignmentSubmissions((data) => {
+      setAssignmentSubmissionsState(data);
+      saveAssignmentSubmissions(data);
+    });
+
+    const unsubApplications = subscribeOnlineApplications((data) => {
+      setOnlineApplicationsState(data);
+      saveOnlineApplications(data);
+    });
+
     return () => {
       unsubSettings();
       unsubCourses();
@@ -152,6 +220,11 @@ export default function App() {
       unsubTx();
       unsubAtt();
       unsubUsers();
+      unsubPublicStaff();
+      unsubPublicEvents();
+      unsubAssignments();
+      unsubAssignmentSubmissions();
+      unsubApplications();
     };
   }, []);
 
@@ -276,7 +349,7 @@ export default function App() {
     showToast(`Access role changed to ${newRole.toUpperCase().replace('_', ' ')}`);
   };
 
-  const handleAddStudent = (newStudent: Student, initialTx?: FeeTransaction, shouldPrint: boolean = true) => {
+  const handleAddStudent = (newStudent: Student, initialTx?: FeeTransaction, shouldPrint: boolean = true, onlineAppId?: string) => {
     const updatedStudents = [newStudent, ...students];
     setStudentsState(updatedStudents);
     saveStudents(updatedStudents);
@@ -293,8 +366,18 @@ export default function App() {
       }
     }
 
-    showToast(`Student ${newStudent.name} (${newStudent.studentId}) registered successfully!`);
-    setActiveTab('id_cards');
+    // If this admission originated from an online application, clear and remove it from inbox history
+    if (onlineAppId) {
+      const updatedApps = onlineApplications.filter(a => a.id !== onlineAppId);
+      setOnlineApplicationsState(updatedApps);
+      saveOnlineApplications(updatedApps);
+      dbDeleteOnlineApplication(onlineAppId);
+    }
+
+    setInitialApplicationForAdmission(null);
+
+    showToast(`Student ${newStudent.name} (Roll #${newStudent.studentId}) enrolled & registered successfully!`);
+    setActiveTab('students_list');
   };
 
   const handleSubmitFee = (newTx: FeeTransaction, updatedStudent: Student) => {
@@ -555,8 +638,149 @@ const getEffectiveBaseCategories = (settings: InstituteSettings): string[] => {
     showToast('Staff account removed.');
   };
 
-  const handleResetDemoData = () => {
+  // --- LMS & PUBLIC WEBSITE HANDLERS ---
+  const handleSaveAssignment = (asg: Assignment) => {
+    const updated = [asg, ...assignments.filter(a => a.id !== asg.id)];
+    setAssignmentsState(updated);
+    saveAssignments(updated);
+    dbSaveAssignment(asg);
+    showToast('Assignment published successfully!');
+  };
+
+  const handleDeleteAssignment = (id: string) => {
+    const updated = assignments.filter(a => a.id !== id);
+    setAssignmentsState(updated);
+    saveAssignments(updated);
+    dbDeleteAssignment(id);
+    showToast('Assignment deleted.');
+  };
+
+  const handleSubmitSubmission = (sub: AssignmentSubmission) => {
+    const updated = [sub, ...assignmentSubmissions.filter(s => s.id !== sub.id)];
+    setAssignmentSubmissionsState(updated);
+    saveAssignmentSubmissions(updated);
+    dbSaveAssignmentSubmission(sub);
+    showToast('Homework submitted successfully to portal!');
+  };
+
+  const handleGradeSubmission = (sub: AssignmentSubmission) => {
+    const updated = assignmentSubmissions.map(s => s.id === sub.id ? sub : s);
+    setAssignmentSubmissionsState(updated);
+    saveAssignmentSubmissions(updated);
+    dbSaveAssignmentSubmission(sub);
+    showToast('Grade saved successfully!');
+  };
+
+  const handleSavePublicStaff = (member: PublicStaffMember) => {
+    const updated = [member, ...publicStaff.filter(m => m.id !== member.id)];
+    setPublicStaffState(updated);
+    savePublicStaff(updated);
+    dbSavePublicStaff(member);
+    showToast('Staff profile saved to website!');
+  };
+
+  const handleDeletePublicStaff = (id: string) => {
+    const updated = publicStaff.filter(m => m.id !== id);
+    setPublicStaffState(updated);
+    savePublicStaff(updated);
+    dbDeletePublicStaff(id);
+    showToast('Staff member removed.');
+  };
+
+  const handleSavePublicEvent = (ev: PublicEvent) => {
+    const updated = [ev, ...publicEvents.filter(e => e.id !== ev.id)];
+    setPublicEventsState(updated);
+    savePublicEvents(updated);
+    dbSavePublicEvent(ev);
+    showToast('Event published to website gallery!');
+  };
+
+  const handleDeletePublicEvent = (id: string) => {
+    const updated = publicEvents.filter(e => e.id !== id);
+    setPublicEventsState(updated);
+    savePublicEvents(updated);
+    dbDeletePublicEvent(id);
+    showToast('Event removed.');
+  };
+
+  const handleSubmitOnlineApplication = (app: OnlineApplication) => {
+    const updated = [app, ...onlineApplications];
+    setOnlineApplicationsState(updated);
+    saveOnlineApplications(updated);
+    dbSaveOnlineApplication(app);
+    showToast('Your online application has been submitted successfully! Admissions office will contact you soon.');
+  };
+
+  const handleDeleteOnlineApplication = (appId: string) => {
+    const updated = onlineApplications.filter(a => a.id !== appId);
+    setOnlineApplicationsState(updated);
+    saveOnlineApplications(updated);
+    dbDeleteOnlineApplication(appId);
+    showToast('Application cleared from inbox history.');
+  };
+
+  const handleUpdateApplicationStatus = (appId: string, status: 'pending' | 'accepted' | 'rejected') => {
+    if (status === 'rejected') {
+      handleDeleteOnlineApplication(appId);
+      return;
+    }
+    const updated = onlineApplications.map(a => a.id === appId ? { ...a, status } : a);
+    setOnlineApplicationsState(updated);
+    saveOnlineApplications(updated);
+    showToast(`Application status updated to ${status}`);
+  };
+
+  const handleConvertAppToStudent = (app: OnlineApplication) => {
+    setInitialApplicationForAdmission(app);
+    setActiveTab('add_student');
+    showToast(`Redirecting to Admission Form with details auto-filled for ${app.applicantName}!`);
+  };
+
+  const handleStudentLogin = (st: Student) => {
+    setLoggedInStudent(st);
+    setLoggedInStudentState(st);
+    showToast(`Welcome to Student Portal, ${st.name}!`);
+  };
+
+  const handleStudentLogout = () => {
+    setLoggedInStudent(null);
+    setLoggedInStudentState(null);
+    showToast('Logged out of Student Portal.');
+  };
+
+  const handleUpdateStudentPassword = (studentId: string, newPass: string) => {
+    const updated = students.map(s => s.id === studentId || s.studentId === studentId ? { ...s, portalPassword: newPass, password: newPass } : s);
+    setStudentsState(updated);
+    saveStudents(updated);
+
+    const target = updated.find(s => s.id === studentId || s.studentId === studentId);
+    if (target) {
+      dbSaveStudent(target);
+      setLoggedInStudent(target);
+      setLoggedInStudentState(target);
+    }
+    showToast('Portal password updated successfully!');
+  };
+
+  const handleUpdateStudentPhoto = (studentId: string, photoUrl: string) => {
+    const updated = students.map(s => (s.id === studentId || s.studentId === studentId) ? { ...s, photoUrl } : s);
+    setStudentsState(updated);
+    saveStudents(updated);
+
+    const target = updated.find(s => s.id === studentId || s.studentId === studentId);
+    if (target) {
+      dbSaveStudent(target);
+      if (loggedInStudent && (loggedInStudent.id === studentId || loggedInStudent.studentId === studentId)) {
+        const updatedLogged = { ...loggedInStudent, photoUrl };
+        setLoggedInStudent(updatedLogged);
+        setLoggedInStudentState(updatedLogged);
+      }
+    }
+  };
+
+  const handleResetDemoData = async () => {
     resetToDefaultData();
+    await forceReSeedDefaultFirestoreData();
     setCoursesState(getCourses());
     setStudentsState(getStudents());
     setTransactionsState(getTransactions());
@@ -564,12 +788,31 @@ const getEffectiveBaseCategories = (settings: InstituteSettings): string[] => {
     setUsersState(getUsers());
     setRoleState(getCurrentRole());
     setSettingsState(getSettings());
-    showToast('Demo data reset successfully.');
+    showToast('Initial default sample data restored across LocalStorage and Cloud Firestore.');
   };
 
   const passOutCount = students.filter(s => s.status === 'pass_out').length;
   const suspendedCount = students.filter(s => s.status === 'suspended').length;
   const activeStudentsCount = students.filter(s => s.status === 'active').length;
+  const defaultersCount = students.filter(s => {
+    if (s.status !== 'active') return false;
+    if (s.isDefaulterExempted) return false;
+    if (s.balanceRemaining <= 0) return false;
+
+    const now = new Date();
+    const paidInCurrentMonth = transactions.some(tx => {
+      if (tx.studentId !== s.studentId && tx.studentId !== s.id) return false;
+      if (!tx.paymentDate || !tx.amountPaid || tx.amountPaid <= 0) return false;
+      const txDate = new Date(tx.paymentDate);
+      return (
+        !isNaN(txDate.getTime()) &&
+        txDate.getMonth() === now.getMonth() &&
+        txDate.getFullYear() === now.getFullYear()
+      );
+    });
+
+    return !paidInCurrentMonth;
+  }).length;
 
   const currentUser = users.find(u => u.role === currentRole) || users[0];
   const activePermissions = currentRole === 'super_admin' ? {
@@ -594,25 +837,162 @@ const getEffectiveBaseCategories = (settings: InstituteSettings): string[] => {
     canManageUsers: false,
   });
 
-  if (!isLoggedIn) {
+  // --- VIEW MODE 1: PUBLIC WEBSITE VIEW ---
+  if (viewMode === 'public') {
     return (
-      <LoginForm
-        users={users}
+      <div className="min-h-screen bg-slate-50 flex flex-col font-sans selection:bg-emerald-600 selection:text-white">
+        <PublicNavbar
+          settings={settings}
+          activeTab={publicTab}
+          setActiveTab={setPublicTab}
+          onOpenStudentPortal={() => setViewMode('student_portal')}
+          onOpenStaffPortal={() => setViewMode('staff_portal')}
+          onApplyCourseClick={(courseId) => {
+            setApplyCourseId(courseId);
+            setShowOnlineApplyModal(true);
+          }}
+        />
+
+        <main className="flex-1">
+          {publicTab === 'home' && (
+            <PublicHomePage
+              settings={settings}
+              courses={courses}
+              staff={publicStaff}
+              events={publicEvents}
+              setActiveTab={setPublicTab}
+              onApplyCourse={(courseId) => {
+                setApplyCourseId(courseId);
+                setShowOnlineApplyModal(true);
+              }}
+              onOpenStudentPortal={() => setViewMode('student_portal')}
+            />
+          )}
+
+          {publicTab === 'about' && (
+            <PublicAboutPage
+              settings={settings}
+              staff={publicStaff}
+            />
+          )}
+
+          {publicTab === 'courses' && (
+            <PublicCoursesPage
+              courses={courses}
+              settings={settings}
+              onApplyCourse={(courseId) => {
+                setApplyCourseId(courseId);
+                setShowOnlineApplyModal(true);
+              }}
+            />
+          )}
+
+          {publicTab === 'events' && (
+            <PublicEventsPage
+              events={publicEvents}
+            />
+          )}
+
+          {publicTab === 'contact' && (
+            <PublicContactPage
+              settings={settings}
+              showToast={showToast}
+            />
+          )}
+        </main>
+
+        <PublicFooter
+          settings={settings}
+          setActiveTab={setPublicTab}
+          onOpenStudentPortal={() => setViewMode('student_portal')}
+          onOpenStaffPortal={() => setViewMode('staff_portal')}
+        />
+
+        {showOnlineApplyModal && (
+          <OnlineApplyModal
+            courses={courses}
+            initialCourseId={applyCourseId}
+            onClose={() => setShowOnlineApplyModal(false)}
+            onSubmitApplication={handleSubmitOnlineApplication}
+            showToast={showToast}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // --- VIEW MODE 2: STUDENT PORTAL ---
+  if (viewMode === 'student_portal') {
+    return (
+      <StudentPortal
+        loggedInStudent={loggedInStudent}
+        students={students}
+        courses={courses}
+        attendance={attendanceRecords}
+        transactions={transactions}
+        assignments={assignments}
+        submissions={assignmentSubmissions}
         settings={settings}
-        onLoginSuccess={(user) => {
-          setRoleState(user.role);
-          setCurrentRole(user.role);
-          setIsLoggedInState(true);
-          setIsLoggedIn(true);
-          showToast(`Welcome back, ${user.name}! Access role: ${user.role.toUpperCase().replace('_', ' ')}`);
-        }}
+        onLogin={handleStudentLogin}
+        onLogout={handleStudentLogout}
+        onSubmitAssignment={handleSubmitSubmission}
+        onUpdateStudentPassword={handleUpdateStudentPassword}
+        onUpdateStudentPhoto={handleUpdateStudentPhoto}
+        onBackToPublicWebsite={() => setViewMode('public')}
+        showToast={showToast}
       />
     );
   }
 
+  // --- VIEW MODE 3: STAFF & TEACHER PORTAL ---
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col relative">
+        {/* Sticky Top Header Bar for Mobile & Desktop */}
+        <header className="w-full bg-slate-800/95 backdrop-blur-md border-b border-slate-700/80 px-4 py-3 sm:px-8 flex items-center justify-between sticky top-0 z-30 shadow-md">
+          <div className="flex items-center space-x-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span className="text-xs sm:text-sm font-bold text-white tracking-wide">Staff & LMS Portal Login</span>
+          </div>
+          <button
+            onClick={() => setViewMode('public')}
+            className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5 active:scale-95"
+          >
+            <span>← Back to Home Website</span>
+          </button>
+        </header>
+
+        <div className="flex-1 flex flex-col justify-center items-center p-4">
+          <LoginForm
+            users={users}
+            settings={settings}
+            onLoginSuccess={(user) => {
+              setRoleState(user.role);
+              setCurrentRole(user.role);
+              setIsLoggedInState(true);
+              setIsLoggedIn(true);
+              showToast(`Welcome back, ${user.name}! Role: ${user.role.toUpperCase().replace('_', ' ')}`);
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen max-w-full overflow-x-hidden bg-slate-100 text-slate-900 font-sans selection:bg-indigo-600 selection:text-white flex flex-col">
+    <div className="h-screen max-h-screen w-full max-w-full overflow-hidden bg-slate-100 text-slate-900 font-sans selection:bg-indigo-600 selection:text-white flex flex-col">
       
+      {/* Top Bar Switch to Public */}
+      <div className="bg-slate-900 text-slate-300 text-xs py-1.5 px-6 flex justify-between items-center border-b border-slate-800 shrink-0">
+        <span className="font-mono text-[11px] text-emerald-400">● Staff Administration & Teacher LMS Mode Active</span>
+        <button
+          onClick={() => setViewMode('public')}
+          className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md font-bold text-[11px] transition-all"
+        >
+          ← Return to Public Front-End Website
+        </button>
+      </div>
+
       {/* Top Navigation Header */}
       <Header
         currentRole={currentRole}
@@ -620,6 +1000,8 @@ const getEffectiveBaseCategories = (settings: InstituteSettings): string[] => {
         users={users}
         settings={settings}
         onResetData={handleResetDemoData}
+        pendingApplicationsCount={onlineApplications.filter(a => a.status === 'pending').length}
+        onNavigateToOnlineApplies={() => setActiveTab('website_cms')}
         onLogout={() => {
           setIsLoggedInState(false);
           setIsLoggedIn(false);
@@ -630,7 +1012,7 @@ const getEffectiveBaseCategories = (settings: InstituteSettings): string[] => {
       />
 
       {/* Main Body Layout */}
-      <div className="flex-1 flex overflow-hidden relative max-w-full">
+      <div className="flex-1 min-h-0 flex overflow-hidden relative max-w-full">
         
         {/* Sidebar */}
         <Sidebar
@@ -639,8 +1021,10 @@ const getEffectiveBaseCategories = (settings: InstituteSettings): string[] => {
           currentRole={currentRole}
           userPermissions={activePermissions}
           activeStudentsCount={activeStudentsCount}
+          defaultersCount={defaultersCount}
           passOutCount={passOutCount}
           suspendedCount={suspendedCount}
+          pendingApplicationsCount={onlineApplications.filter(a => a.status === 'pending').length}
           isMobileMenuOpen={isMobileMenuOpen}
           onCloseMobileMenu={() => setIsMobileMenuOpen(false)}
         />
@@ -674,6 +1058,8 @@ const getEffectiveBaseCategories = (settings: InstituteSettings): string[] => {
               courses={courses}
               currentRole={currentRole}
               userPermissions={activePermissions}
+              settings={settings}
+              showToast={showToast}
               onUpdateStudent={handleUpdateStudent}
               onUpdateStudentStatus={handleUpdateStudentStatus}
               onDeleteStudent={handleDeleteStudent}
@@ -687,6 +1073,8 @@ const getEffectiveBaseCategories = (settings: InstituteSettings): string[] => {
               courses={courses}
               existingStudents={students}
               existingTxs={transactions}
+              initialApplication={initialApplicationForAdmission}
+              onClearInitialApplication={() => setInitialApplicationForAdmission(null)}
               onAddStudent={handleAddStudent}
               onAddCourse={handleAddCourse}
               onCancel={() => setActiveTab('dashboard')}
@@ -746,6 +1134,7 @@ const getEffectiveBaseCategories = (settings: InstituteSettings): string[] => {
               transactions={transactions}
               currentRole={currentRole}
               onUpdateStudent={handleUpdateStudent}
+              onNavigateToSubmitFee={() => setActiveTab('submit_fee')}
             />
           )}
 
@@ -814,6 +1203,38 @@ const getEffectiveBaseCategories = (settings: InstituteSettings): string[] => {
               onAddUser={handleAddUser}
               onUpdateUser={handleUpdateUser}
               onDeleteUser={handleDeleteUser}
+            />
+          )}
+
+          {activeTab === 'assignments_manager' && (
+            <AssignmentsManager
+              courses={courses}
+              assignments={assignments}
+              submissions={assignmentSubmissions}
+              currentUser={currentUser}
+              onSaveAssignment={handleSaveAssignment}
+              onDeleteAssignment={handleDeleteAssignment}
+              onGradeSubmission={handleGradeSubmission}
+              showToast={showToast}
+            />
+          )}
+
+          {activeTab === 'website_cms' && (
+            <WebsiteCMSManager
+              settings={settings}
+              staff={publicStaff}
+              events={publicEvents}
+              applications={onlineApplications}
+              courses={courses}
+              onSaveSettings={handleUpdateSettings}
+              onSaveStaff={handleSavePublicStaff}
+              onDeleteStaff={handleDeletePublicStaff}
+              onSaveEvent={handleSavePublicEvent}
+              onDeleteEvent={handleDeletePublicEvent}
+              onUpdateAppStatus={handleUpdateApplicationStatus}
+              onDeleteApp={handleDeleteOnlineApplication}
+              onConvertAppToStudent={handleConvertAppToStudent}
+              showToast={showToast}
             />
           )}
 

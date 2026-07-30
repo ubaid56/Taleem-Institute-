@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Student, Course, FeeTransaction, UserRole } from '../types';
 import { formatPKR } from '../lib/utils';
-import { AlertTriangle, ShieldCheck, CheckCircle2, Search, Filter, Phone, UserX } from 'lucide-react';
+import { AlertTriangle, ShieldCheck, CheckCircle2, Search, Filter, Phone, UserX, Receipt } from 'lucide-react';
 
 interface DefaulterListViewProps {
   students: Student[];
@@ -9,6 +9,7 @@ interface DefaulterListViewProps {
   transactions: FeeTransaction[];
   currentRole: UserRole;
   onUpdateStudent: (updatedStudent: Student) => void;
+  onNavigateToSubmitFee?: (student?: Student) => void;
 }
 
 export const DefaulterListView: React.FC<DefaulterListViewProps> = ({
@@ -17,6 +18,7 @@ export const DefaulterListView: React.FC<DefaulterListViewProps> = ({
   transactions,
   currentRole,
   onUpdateStudent,
+  onNavigateToSubmitFee,
 }) => {
   const [selectedCourseFilter, setSelectedCourseFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -26,10 +28,25 @@ export const DefaulterListView: React.FC<DefaulterListViewProps> = ({
   const currentDay = currentDate.getDate();
   const currentMonthName = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
 
-  // Filter active students who have unpaid balances / pending monthly fees
+  // Filter active students who have unpaid balances / pending monthly fees and HAVE NOT submitted any fee in the current month
   const defaulterStudents = students.filter(s => {
     if (s.status !== 'active') return false;
     if (s.isDefaulterExempted) return false;
+    if (s.balanceRemaining <= 0) return false; // Zero balance students are cleared
+
+    // Check if student submitted any fee payment in the current month
+    const paidInCurrentMonth = transactions.some(tx => {
+      if (tx.studentId !== s.studentId && tx.studentId !== s.id) return false;
+      if (!tx.paymentDate || !tx.amountPaid || tx.amountPaid <= 0) return false;
+      const txDate = new Date(tx.paymentDate);
+      return (
+        !isNaN(txDate.getTime()) &&
+        txDate.getMonth() === currentDate.getMonth() &&
+        txDate.getFullYear() === currentDate.getFullYear()
+      );
+    });
+
+    if (paidInCurrentMonth) return false; // Student submitted monthly fee -> removed from defaulter list!
 
     const matchesCourse = selectedCourseFilter === 'ALL' || s.courses.some(c => c.courseId === selectedCourseFilter);
     const matchesSearch = 
@@ -37,10 +54,7 @@ export const DefaulterListView: React.FC<DefaulterListViewProps> = ({
       s.studentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.mobileNo.includes(searchQuery);
 
-    // Defaulter condition: balanceRemaining > 0 (or has not paid current month fee)
-    const hasUnpaidBalance = s.balanceRemaining > 0;
-
-    return matchesCourse && matchesSearch && hasUnpaidBalance;
+    return matchesCourse && matchesSearch;
   });
 
   const handleExemptStudent = (student: Student) => {
@@ -82,7 +96,7 @@ export const DefaulterListView: React.FC<DefaulterListViewProps> = ({
           <div className="min-w-0">
             <h2 className="font-serif italic font-bold text-xl sm:text-2xl text-[#1A1A1A]">Fee Defaulters & Due Tracker</h2>
             <p className="text-[10px] uppercase tracking-widest text-[#1A1A1A]/70 font-bold">
-              Automatic 5th of Month Due Cutoff • {currentMonthName} • Only Super Admin can exempt/remove from defaulters
+              Monthly Fee Cutoff: 30th of Every Month • {currentMonthName} • Only Super Admin can exempt/remove from defaulters
             </p>
           </div>
         </div>
@@ -95,16 +109,21 @@ export const DefaulterListView: React.FC<DefaulterListViewProps> = ({
       </div>
 
       {/* Notice Banner */}
-      <div className="bg-[#F4F2EE] border-2 border-[#1A1A1A] p-4 flex items-center justify-between text-xs font-medium">
+      <div className="bg-[#F4F2EE] border-2 border-[#1A1A1A] p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs font-medium">
         <div className="flex items-center space-x-2">
-          <AlertTriangle className="w-5 h-5 text-amber-700 shrink-0" />
+          <AlertTriangle className="w-5 h-5 text-rose-700 shrink-0" />
           <span>
-            Monthly fees are automatically issued on the 30th. Students who have not submitted their fees until the <strong>5th date</strong> of every month appear here automatically. Once they submit their monthly fees, their balance updates and they are removed.
+            Monthly fees are due on the <strong>30th date</strong> of every month. Students with outstanding balances appear on the defaulters list if they have not submitted any fee payment in <strong>{currentMonthName}</strong>. Once a student submits their monthly installment or any fee amount, they are automatically removed from this month's defaulter list.
           </span>
         </div>
-        <span className="font-bold font-mono uppercase bg-white border border-[#1A1A1A] px-2 py-1">
-          Current Day: {currentDay}
-        </span>
+        <div className="flex items-center space-x-2 shrink-0">
+          <span className="font-bold font-mono uppercase bg-rose-100 text-rose-900 border border-rose-700 px-2.5 py-1 text-[11px]">
+            Due Date: 30th
+          </span>
+          <span className="font-bold font-mono uppercase bg-white border border-[#1A1A1A] px-2.5 py-1 text-[11px]">
+            Today: Day {currentDay}
+          </span>
+        </div>
       </div>
 
       {/* Filter Controls */}
@@ -167,26 +186,41 @@ export const DefaulterListView: React.FC<DefaulterListViewProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-1">
-                <div className="text-[10px] font-bold text-[#1A1A1A]/80">
+              <div className="flex items-center justify-between pt-1 border-t border-[#1A1A1A]/10">
+                <div className="text-[10px] font-bold text-[#1A1A1A]/80 truncate max-w-[150px]">
                   {student.courses.map(c => c.courseName).join(', ')}
                 </div>
-                {currentRole === 'super_admin' ? (
-                  <button
-                    onClick={() => handleExemptStudent(student)}
-                    className="px-3 py-1.5 bg-[#1A1A1A] hover:bg-[#333] text-white text-xs font-bold uppercase tracking-wider border border-[#1A1A1A]"
-                  >
-                    Exempt / Remove
-                  </button>
-                ) : (
-                  <span className="text-[10px] text-[#1A1A1A]/60 italic font-bold">Super Admin Only</span>
-                )}
+                <div className="flex items-center space-x-1.5">
+                  {onNavigateToSubmitFee && (
+                    <button
+                      type="button"
+                      onClick={() => onNavigateToSubmitFee(student)}
+                      className="px-2.5 py-1 bg-emerald-800 hover:bg-emerald-900 active:bg-emerald-950 text-white text-[10px] font-bold uppercase tracking-wider border border-emerald-950 flex items-center space-x-1 transition cursor-pointer"
+                      title="Collect / Submit Fee to clear dues"
+                    >
+                      <Receipt className="w-3 h-3 shrink-0" />
+                      <span>Submit Fee</span>
+                    </button>
+                  )}
+                  {currentRole === 'super_admin' ? (
+                    <button
+                      type="button"
+                      onClick={() => handleExemptStudent(student)}
+                      className="px-2.5 py-1 bg-[#1A1A1A] hover:bg-[#333] text-white text-[10px] font-bold uppercase tracking-wider border border-[#1A1A1A] transition cursor-pointer"
+                      title="Exempt student from defaulter list"
+                    >
+                      Exempt
+                    </button>
+                  ) : (
+                    <span className="text-[9px] text-[#1A1A1A]/60 italic font-bold">Admin Only</span>
+                  )}
+                </div>
               </div>
             </div>
           ))
         ) : (
-          <div className="p-8 text-center bg-white border-2 border-[#1A1A1A] text-xs text-[#1A1A1A]/60 font-bold uppercase tracking-wider">
-            🎉 No fee defaulters found! All active students have cleared their dues.
+          <div className="p-8 text-center bg-white border-2 border-[#1A1A1A] text-xs text-[#1A1A1A]/80 font-bold uppercase tracking-wider">
+            🎉 No fee defaulters found for {currentMonthName}! All active students have submitted their monthly fees.
           </div>
         )}
       </div>
@@ -203,7 +237,7 @@ export const DefaulterListView: React.FC<DefaulterListViewProps> = ({
                 <th className="p-3 border-r border-[#1A1A1A]">Total Calculated</th>
                 <th className="p-3 border-r border-[#1A1A1A]">Total Paid</th>
                 <th className="p-3 border-r border-[#1A1A1A] bg-rose-900">Remaining Due</th>
-                <th className="p-3 text-center">Super Admin Action</th>
+                <th className="p-3 text-center">Fee Actions / Exemption</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#1A1A1A]">
@@ -252,23 +286,38 @@ export const DefaulterListView: React.FC<DefaulterListViewProps> = ({
                     </td>
 
                     <td className="p-3 text-center">
-                      {currentRole === 'super_admin' ? (
-                        <button
-                          onClick={() => handleExemptStudent(student)}
-                          className="px-3 py-1.5 bg-[#1A1A1A] hover:bg-[#333] text-white text-[10px] font-bold uppercase tracking-wider transition border border-[#1A1A1A]"
-                        >
-                          Exempt / Remove
-                        </button>
-                      ) : (
-                        <span className="text-[10px] text-[#1A1A1A]/60 italic font-bold">Super Admin Only</span>
-                      )}
+                      <div className="flex items-center justify-center space-x-1.5">
+                        {onNavigateToSubmitFee && (
+                          <button
+                            type="button"
+                            onClick={() => onNavigateToSubmitFee(student)}
+                            className="px-2.5 py-1 bg-emerald-800 hover:bg-emerald-900 active:bg-emerald-950 text-white text-[10px] font-bold uppercase tracking-wider border border-emerald-950 flex items-center space-x-1 transition cursor-pointer"
+                            title="Collect / Submit fee to clear dues"
+                          >
+                            <Receipt className="w-3 h-3 shrink-0" />
+                            <span>Submit Fee</span>
+                          </button>
+                        )}
+                        {currentRole === 'super_admin' ? (
+                          <button
+                            type="button"
+                            onClick={() => handleExemptStudent(student)}
+                            className="px-2.5 py-1 bg-[#1A1A1A] hover:bg-[#333] text-white text-[10px] font-bold uppercase tracking-wider border border-[#1A1A1A] transition cursor-pointer"
+                            title="Exempt student from defaulter list"
+                          >
+                            Exempt
+                          </button>
+                        ) : (
+                          <span className="text-[9px] text-[#1A1A1A]/60 italic font-bold">Admin Only</span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-xs text-[#1A1A1A]/60 font-bold uppercase tracking-wider">
-                    🎉 No fee defaulters found! All active students have cleared their dues.
+                  <td colSpan={7} className="p-8 text-center text-xs text-[#1A1A1A]/80 font-bold uppercase tracking-wider">
+                    🎉 No fee defaulters found for {currentMonthName}! All active students have submitted their monthly fees.
                   </td>
                 </tr>
               )}
