@@ -1,12 +1,4 @@
 {
-  "projectId": "fleet-order-798sv",
-  "appId": "1:356213101265:web:9ab6abaea1a6142bd12bf0",
-  "apiKey": "AIzaSyABaDlvNLkMgNjjUNHpWswzoFmfxRp_CrE",
-  "authDomain": "fleet-order-798sv.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-taleeminstitutem-f93df736-af32-4d32-81c4-9afe207bf9ff",
-  "storageBucket": "fleet-order-798sv.firebasestorage.app",
-  "messagingSenderId": "356213101265",
-  "measurementId": "",
-  "oAuthClientId": "356213101265-q78794uq37gl4tj76rm3gtif6av8ab7j.apps.googleusercontent.com",
-  "recaptchaSiteKey": ""
+  "name": "TIST",
+  "project": "firebase"
 }
